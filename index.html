@@ -31,7 +31,7 @@
   <main class="main">
     <header class="top">
       <button class="icon-btn menu" id="menu" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>
-      <h1 id="title">Dashboard</h1>
+      <div class="ttl"><h1 id="title">Dashboard</h1><p id="rdate"></p></div>
       <button class="icon-btn" id="refresh" aria-label="Refresh data"><i class="fa-solid fa-rotate"></i></button>
     </header>
 
@@ -40,55 +40,58 @@
     <section class="view" id="view-overview">
       <div class="cards">
         <article class="card hero">
-          <div class="card-h"><span>Occupancy rate</span><i class="fa-solid fa-arrow-trend-up badge"></i></div>
-          <div class="big" id="k-occ">0%</div>
-          <div class="sub" id="k-occ-sub">Past 30 days</div>
+          <div class="card-h"><span>Past 30D occupancy</span><i class="fa-solid fa-chart-line badge"></i></div>
+          <div class="big" id="k-past">0%</div>
+          <div class="sub" id="k-past-sub">Actual</div>
+        </article>
+        <article class="card">
+          <div class="card-h"><span>Next 30D occupancy</span><i class="fa-solid fa-calendar-days badge"></i></div>
+          <div class="big" id="k-next">0%</div>
+          <div class="sub" id="k-next-sub">Benchmark 0%</div>
+        </article>
+        <article class="card">
+          <div class="card-h"><span>Change vs target</span><i class="fa-solid fa-bullseye badge"></i></div>
+          <div class="big" id="k-gap">0%</div>
+          <div class="sub" id="k-gap-sub">Next 30D vs benchmark</div>
         </article>
         <article class="card">
           <div class="card-h"><span>Active listings</span><i class="fa-solid fa-house badge"></i></div>
           <div class="big" id="k-active">0</div>
-          <div class="sub" id="k-active-sub">of 0 total records</div>
-        </article>
-        <article class="card">
-          <div class="card-h"><span>Average RevPAR</span><i class="fa-solid fa-dollar-sign badge"></i></div>
-          <div class="big" id="k-rev">0</div>
-          <div class="sub" id="k-rev-sub">Next 30 days: 0</div>
-        </article>
-        <article class="card">
-          <div class="card-h"><span>Bookings pickup</span><i class="fa-solid fa-calendar-check badge"></i></div>
-          <div class="big" id="k-pick">0</div>
-          <div class="sub" id="k-pick-sub">Last 30 days</div>
+          <div class="sub" id="k-active-sub">Portfolio total</div>
         </article>
       </div>
 
       <article class="panel">
         <div class="panel-h">
-          <h2>Occupancy by region</h2>
-          <div class="seg" id="seg">
-            <button class="active" data-metric="past">Past 30D</button>
-            <button data-metric="next">Next 30D</button>
-          </div>
+          <h2>Actual vs benchmark</h2>
+          <span class="pill n" id="health">Health</span>
         </div>
-        <div class="legend"><span><i class="sw sw-fill"></i>Occupancy</span><span><i class="sw sw-mark"></i>Benchmark</span></div>
-        <div class="bars" id="bars"></div>
+        <div class="legend"><span><i class="sw sw-fill"></i>Actual</span><span><i class="sw sw-mark"></i>Benchmark</span></div>
+        <div id="outlook"></div>
       </article>
 
       <div class="duo">
         <article class="panel">
-          <h2>Needs attention</h2>
-          <ul class="feed" id="attention"></ul>
+          <h2>Risk indicators</h2>
+          <ul class="feed" id="risks"></ul>
         </article>
         <article class="panel">
           <h2>Region status</h2>
           <div id="status-split"></div>
+          <ul class="kv" id="kv"></ul>
         </article>
       </div>
     </section>
 
     <section class="view" id="view-listings" hidden>
       <article class="panel">
+        <div class="chips" id="types">
+          <button class="chip active" data-type="all"><i class="fa-solid fa-layer-group"></i>All<span class="n" id="n-all"></span></button>
+          <button class="chip" data-type="entire"><i class="fa-solid fa-house"></i>Entire Unit<span class="n" id="n-entire"></span></button>
+          <button class="chip" data-type="room"><i class="fa-solid fa-door-open"></i>By Room<span class="n" id="n-room"></span></button>
+        </div>
         <div class="filters">
-          <label class="field grow"><i class="fa-solid fa-magnifying-glass"></i><input type="search" id="q" placeholder="Search listing or ID"></label>
+          <label class="field grow"><i class="fa-solid fa-magnifying-glass"></i><input type="search" id="q" placeholder="Search listing"></label>
           <select id="f-city" aria-label="City"><option value="">All cities</option></select>
           <select id="f-status" aria-label="Status"><option value="">All statuses</option></select>
         </div>
@@ -96,14 +99,16 @@
         <div class="table-wrap">
           <table class="tbl" id="tbl-listings">
             <thead><tr>
+              <th data-sort="rank">Rank</th>
               <th data-sort="name">Listing</th>
               <th data-sort="city">City</th>
-              <th data-sort="occ30" class="num">Occ. past</th>
+              <th data-sort="type">Type</th>
+              <th data-sort="occ" class="num">Occ. past</th>
               <th data-sort="occN" class="num">Occ. next</th>
-              <th data-sort="rev" class="num">RevPAR</th>
-              <th data-sort="base" class="num">Base</th>
-              <th data-sort="rec" class="num">Suggested</th>
-              <th data-sort="pick" class="num">Pickup</th>
+              <th data-sort="rev" class="num">RevPAR past</th>
+              <th data-sort="revN" class="num">RevPAR next</th>
+              <th data-sort="chg" class="num">Change</th>
+              <th data-sort="status">Status</th>
             </tr></thead>
             <tbody></tbody>
           </table>
@@ -119,7 +124,7 @@
             <thead><tr>
               <th>Region</th><th class="num">Listings</th><th class="num">Past 30D</th>
               <th class="num">Next 14D</th><th class="num">Next 30D</th><th class="num">Benchmark</th>
-              <th class="num">Tasks</th><th>Status</th>
+              <th class="num">Gap</th><th>Status</th>
             </tr></thead>
             <tbody></tbody>
           </table>
