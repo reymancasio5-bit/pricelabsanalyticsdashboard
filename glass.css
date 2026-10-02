@@ -1,0 +1,94 @@
+/* Portfolio Desk - Glassmorphism (restyles the base layout in styles.css) */
+
+:root{
+  --bg:#091710;--card:rgba(17,38,28,.76);--ink:#f1f6f2;--muted:#a6b7ad;--line:rgba(220,239,227,.13);
+  --leaf:rgba(220,239,227,.08);--green-d:#a9e6bf;--green:#54bd80;--lime:#d3c38e;
+  --ok:#6ee7a0;--amber:#fbbf4d;--red:#ff8a7a;
+  --ok-bg:rgba(110,231,160,.16);--amber-bg:rgba(251,191,77,.16);--red-bg:rgba(255,138,122,.16);
+  --shadow:0 14px 38px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.07);
+  --blur:blur(16px) saturate(135%);
+}
+body{
+  background:#091710;
+  background-image:radial-gradient(55vmax 55vmax at 8% -12%,rgba(52,122,83,.24),transparent 62%),
+    radial-gradient(48vmax 48vmax at 100% 4%,rgba(115,103,66,.15),transparent 64%),
+    radial-gradient(58vmax 58vmax at 52% 112%,rgba(24,85,90,.20),transparent 62%);
+  background-attachment:scroll;
+}
+::selection{background:rgba(127,224,168,.35)}
+
+/* Glass surfaces */
+.side,.card,.panel,.stat,.notice,.chip,.icon-btn,.back,.more,.field{
+  -webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);
+  border:1px solid var(--line);
+}
+.side{background:rgba(10,25,18,.84);border-radius:0 26px 26px 0;border-left:0}
+.card,.panel,.stat{background:linear-gradient(145deg,rgba(28,55,40,.78),rgba(15,34,25,.70));box-shadow:var(--shadow)}
+.panel .stat{background:rgba(235,247,239,.045);box-shadow:none}
+.card.hero{background:linear-gradient(135deg,rgba(115,110,69,.78),rgba(23,91,59,.86));color:#fff}
+.hero .badge{background:rgba(255,255,255,.92);color:#17422c}
+.hero .sub{color:#eff4de}
+.side-note{background:linear-gradient(150deg,rgba(62,120,82,.46),rgba(15,57,40,.58));border:1px solid var(--line)}
+.nav-btn.active{color:#10271a;background:linear-gradient(90deg,#ddcf9d,#72c994);box-shadow:0 8px 20px rgba(74,156,103,.22)}
+.nav-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+.brand i,.sub{color:var(--green-d)}
+.icon-btn,.chip,.more,.back{background:rgba(255,255,255,.1)}
+.icon-btn:hover,.more:hover,.back:hover{background:rgba(255,255,255,.2)}
+.chip.active{background:linear-gradient(90deg,var(--lime),var(--green));color:#06241a;border-color:transparent}
+.chip.active:hover{color:#06241a}
+.field,.filters select,.sortbar select{background:rgba(255,255,255,.1);color:var(--ink)}
+.filters select,.sortbar select{border:1px solid var(--line)}
+.field input::placeholder{color:var(--muted)}
+select option{background:#0f2a20;color:#eef6f1}
+.notice{background:var(--amber-bg);color:#ffe3a6}
+.notice.err{background:var(--red-bg);color:#ffc1b8}
+
+/* Bars */
+.bar-track,.split-row .track{background:rgba(255,255,255,.12)}
+.bar-fill{background:linear-gradient(90deg,var(--lime),var(--green));box-shadow:0 0 12px rgba(79,196,127,.3)}
+.bar-fill.low{background:repeating-linear-gradient(135deg,rgba(255,255,255,.22) 0 2px,transparent 2px 7px),linear-gradient(90deg,#f6c453,#e0902b);box-shadow:0 0 12px rgba(246,196,83,.4)}
+.bar-mark,.sw-mark{background:#fff}
+.fill.n,.fill.mid{background:#7f918a}
+
+/* Status icons glow softly */
+.ind,.tag{box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+.ind.g{box-shadow:inset 0 0 0 1px rgba(110,231,160,.35),0 0 14px rgba(110,231,160,.25)}
+.ind.y{box-shadow:inset 0 0 0 1px rgba(251,191,77,.35),0 0 14px rgba(251,191,77,.22)}
+.ind.r{box-shadow:inset 0 0 0 1px rgba(255,138,122,.4),0 0 14px rgba(255,138,122,.28)}
+.ind.n,.tag{background:rgba(255,255,255,.1)}
+.tag.team{background:rgba(127,224,168,.16);color:var(--green-d)}
+.tagchip{background:rgba(127,224,168,.14);color:var(--green-d)}
+.pill.n{background:rgba(255,255,255,.1)}
+
+/* Tables and rows */
+.tbl th,.tbl td{border-color:var(--line)}
+.tbl tr{background:rgba(238,248,241,.025)}
+.tbl tr.clk:hover,.row-link:hover,.ol.clk:hover{background:rgba(255,255,255,.075)}
+.tbl tr.clk td.name b{color:#fff}
+.tbl th[aria-sort]{color:var(--green-d)}
+.col-bar{background:linear-gradient(180deg,var(--lime),var(--green))}
+.col.now .col-bar{background:#fff}
+.stat span i{color:var(--green-d)}
+.feed li,.kv li{border-color:var(--line)}
+.badge{border-color:rgba(255,255,255,.25)}
+
+@media (hover:hover){
+  .card:hover{box-shadow:0 18px 44px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.12)}
+}
+/* Phone cards stay legible and cheap to render */
+@media (max-width:640px){
+  :root{--blur:blur(10px) saturate(125%)}
+  body{background-attachment:scroll}
+  .tbl tr{background:rgba(238,248,241,.035)}
+}
+@media (min-width:901px){
+  body{background-attachment:fixed}
+}
+@media (max-width:900px){
+  .side{background:rgba(11,31,23,.88)}
+}
+/* Weak devices: drop blur, keep the look */
+@media (max-width:360px),(prefers-reduced-transparency:reduce){
+  .side,.card,.panel,.stat,.notice,.chip,.icon-btn,.back,.more,.field{-webkit-backdrop-filter:none;backdrop-filter:none}
+  .side,.card,.panel,.stat{background:rgba(18,39,28,.96)}
+}
