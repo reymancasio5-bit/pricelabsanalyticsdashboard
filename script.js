@@ -30,6 +30,12 @@
   function enc(s) { return encodeURIComponent(s); }
   function cls(n) { return n == null ? '' : n < 0 ? 'down' : 'up'; }
   function tcase(s) { return String(s || '').trim().toLowerCase().replace(/(^|[\s\-])([a-z\u00e0-\u00ff])/g, function (m, a, b) { return a + b.toUpperCase(); }); }
+  function heading(s) {
+    // Preserve acronyms, HTML and entities; keep the comparison word "vs" lowercase.
+    return String(s == null ? '' : s).replace(/(<[^>]*>|&[^;\s]+;)|\b([A-Za-z][A-Za-z0-9]*)/g, function (match, markup, word) {
+      return markup || (word.toLowerCase() === 'vs' ? 'vs' : word.charAt(0).toUpperCase() + word.slice(1));
+    });
+  }
   function avg(a) { var v = a.filter(function (x) { return x != null; }); return v.length ? v.reduce(function (s, x) { return s + x; }, 0) / v.length : null; }
   function weighted(list, key) {
     var total = 0, weight = 0;
@@ -71,7 +77,8 @@
   function tag(icon, label) { return '<span class="tag" title="' + esc(label) + '" role="img" aria-label="' + esc(label) + '"><i class="fa-solid ' + icon + '" aria-hidden="true"></i></span>'; }
   var TYPE = { entire: 'Entire Unit', room: 'By Room' };
   function typeTag(t) { return t ? tag(t === 'room' ? 'fa-door-open' : 'fa-house', TYPE[t]) : tag('fa-ellipsis', 'Other'); }
-  function teamTag(g) {
+  function teamTag(g, useIcon) {
+    if (useIcon) return '<span class="tag team" title="' + esc(g || 'No team') + '" role="img" aria-label="' + esc(g || 'No team') + '"><i class="fa-solid ' + (g ? 'fa-people-group' : 'fa-user-slash') + '" aria-hidden="true"></i></span>';
     var m = /team\s*(\w+)/i.exec(g || '');
     return g ? '<span class="tag team" title="' + esc(g) + '">' + esc(m ? m[1].toUpperCase() : g.charAt(0)) + '</span>' : tag('fa-minus', 'No team');
   }
@@ -186,7 +193,7 @@
   function olRow(label, cur, b, href, note) {
     var gp = cur != null && b != null ? cur - b : null;
     var gc = gp == null ? 'n' : gp < 0 ? 'r' : 'g';
-    return '<div class="ol' + (href ? ' clk' : '') + '"' + go(href) + '><div class="ol-head"><b>' + esc(label) + '</b><span class="ol-val">' +
+    return '<div class="ol' + (href ? ' clk' : '') + '"' + go(href) + '><div class="ol-head"><b>' + heading(esc(label)) + '</b><span class="ol-val">' +
       pct(cur) + (b != null ? ' vs ' + pct(b) : '') + '</span>' +
       (gp != null ? '<span class="pill ' + gc + '">' + sign(gp) + pct(gp) + '</span>' : '') + chev(href) + '</div>' +
       (note ? '<div class="ol-note">' + esc(note) + '</div>' : '') +
@@ -194,17 +201,18 @@
       (b != null ? '<div class="bar-mark" style="left:' + clamp(b) + '%"></div>' : '') + '</div></div>';
   }
   function numRow(label, val, max, href) {
-    return '<div class="ol' + (href ? ' clk' : '') + '"' + go(href) + '><div class="ol-head"><b>' + esc(label) + '</b><span class="ol-val">' + val + '</span>' + chev(href) +
+    return '<div class="ol' + (href ? ' clk' : '') + '"' + go(href) + '><div class="ol-head"><b>' + heading(esc(label)) + '</b><span class="ol-val">' + val + '</span>' + chev(href) +
       '</div><div class="bar-track"><div class="bar-fill" style="width:0" data-w="' + clamp(max ? val / max * 100 : 0) + '"></div></div></div>';
   }
   function moneyRow(label, v, max) {
-    return '<div class="ol"><div class="ol-head"><b>' + label + '</b><span class="ol-val">' + money(v) + '</span></div>' +
+    return '<div class="ol"><div class="ol-head"><b>' + heading(label) + '</b><span class="ol-val">' + money(v) + '</span></div>' +
       '<div class="bar-track"><div class="bar-fill" style="width:0" data-w="' + clamp(max ? v / max * 100 : 0) + '"></div></div></div>';
   }
   function stat(label, val, sub, c, icon) {
-    return '<div class="stat"><span>' + (icon ? '<i class="fa-solid ' + icon + '"></i>' : '') + label + '</span><b class="' + (c || '') + '">' + val + '</b>' + (sub ? '<em>' + sub + '</em>' : '') + '</div>';
+    var status = /class="ind [^"]*" title="([^"]*)"/.exec(String(val));
+    return '<div class="stat"><span class="stat-label">' + (icon ? '<i class="fa-solid ' + icon + '" aria-hidden="true"></i>' : '') + '<span class="stat-label-text">' + heading(label) + '</span></span><b class="' + (c || '') + '">' + val + '</b>' + (status ? '<em class="desktop-status">' + status[1] + '</em>' : '') + (sub ? '<em>' + sub + '</em>' : '') + '</div>';
   }
-  function panel(title, inner) { return '<article class="panel"><h2>' + title + '</h2>' + inner + '</article>'; }
+  function panel(title, inner) { return '<article class="panel"><h2>' + heading(title) + '</h2>' + inner + '</article>'; }
   function explain(paras) { return panel('What this means', paras.map(function (p) { return '<p class="txt-p">' + p + '</p>'; }).join('')); }
 
   var LOGIC = 'Status uses the dashboard color logic. Green means the result is at or above its benchmark. Yellow means it is below the benchmark by no more than 10 percentage points. Red means it is more than 10 points below.';
@@ -212,17 +220,17 @@
 
   function regionTable(list) {
     if (!list.length) return '<p class="empty">No regions in this list.</p>';
-    var head = ['Region', 'Listings', 'Past 30D', 'Next 15D', 'Next 15D benchmark', 'Next 30D', 'Next 30D benchmark', 'Indicator'];
+    var head = ['Region', 'Listings', 'Past 30D', 'Next 15D', 'Next 15D Benchmark', 'Next 30D', 'Next 30D Benchmark', 'Indicator'];
     var body = list.map(function (r) {
       return '<tr class="clk"' + go('#/region/' + enc(r.region)) + '><td class="name"><b>' + esc(r.region) + '</b></td>' +
         '<td class="num" data-l="Listings">' + r.act + '</td><td class="num" data-l="Past 30D">' + pct(r.past) + '</td>' +
         '<td class="num" data-l="Next 15D">' + pct(r.n14) + '</td>' +
-        '<td class="num" data-l="Next 15D benchmark">' + pct(r.b14) + '</td>' +
+        '<td class="num" data-l="Next 15D Benchmark">' + pct(r.b14) + '</td>' +
         '<td class="num" data-l="Next 30D">' + pct(r.next) + '</td>' +
-        '<td class="num" data-l="Next 30D benchmark">' + pct(r.b30) + '</td>' +
+        '<td class="num" data-l="Next 30D Benchmark">' + pct(r.b30) + '</td>' +
         '<td class="indicator-cell" data-l="Indicator" data-sv="' + sev(regionIndicator(r)) + '">' + ind(regionIndicator(r)) + '</td></tr>';
     }).join('');
-    return '<div class="table-wrap"><table class="tbl"><thead><tr>' + head.map(function (h, i) { return '<th' + (i > 0 && i < 7 ? ' class="num"' : '') + '>' + h + '</th>'; }).join('') +
+    return '<div class="table-wrap"><table class="tbl"><thead><tr>' + head.map(function (h, i) { return '<th' + (i > 0 && i < 7 ? ' class="num"' : '') + '>' + heading(h) + '</th>'; }).join('') +
       '</tr></thead><tbody>' + body + '</tbody></table></div>';
   }
   function regionIndicator(r) {
@@ -272,15 +280,15 @@
     $('risks').innerHTML = ov.risks.length ? ov.risks.map(function (r, i) {
       var c = statusClass(r.status);
       return '<li><a class="row-link" href="#/risk/' + i + '"><div class="av ' + c + '"><i class="fa-solid ' + (c === 'r' ? 'fa-triangle-exclamation' : 'fa-eye') + '"></i></div>' +
-        '<div class="txt"><b>' + esc(r.label) + '</b><span>' + esc(r.category) + '</span></div>' +
-        '<div class="right"><strong>' + esc(r.value) + '</strong>' + ind(r.status) + '</div>' + chev(1) + '</a></li>';
+        '<div class="txt"><b>' + heading(esc(r.label)) + '</b><span>' + esc(r.category) + '</span></div>' +
+        '<div class="right"><strong>' + esc(r.value) + '</strong></div><i class="fa-solid fa-chevron-right go desktop-risk-arrow" aria-hidden="true"></i></a></li>';
     }).join('') : '<li class="empty">No risk data found.</li>';
 
     var k = ov.kpis || {};
     var gr = nz(k['Green Regions']), ye = nz(k['Yellow Regions']), re = nz(k['Red Regions']), tot = (gr + ye + re) || 1;
     $('status-split').innerHTML = [['g', 'Green', gr], ['y', 'Yellow', ye], ['r', 'Red', re]].map(function (x) {
       return '<a class="split-row row-link" href="#/status/' + x[0] + '">' + ind(x[1]) + '<div class="track"><div class="fill ' + x[0] +
-        '" style="width:0" data-w="' + (x[2] / tot * 100) + '"></div></div><div class="n">' + x[2] + '</div>' + chev(1) + '</a>';
+        '" style="width:0" data-w="' + (x[2] / tot * 100) + '"></div></div><div class="split-count">' + x[2] + '</div>' + chev(1) + '</a>';
     }).join('');
     setBars($('status-split'));
     var rows = [
@@ -318,8 +326,8 @@
     var need = L.filter(function (l) { return statusClass(l.status) === 'r'; }).length;
     var blocked = L.filter(function (l) { return l.blocked; }).length;
     $('pulse').innerHTML = stat('Listings tracked', L.length, 'Pricelabs report', '', 'fa-house') +
-      stat('Avg occupancy next 30D', pct(occN), mkN == null ? '' : 'Benchmark ' + pct(mkN) + ', ' + sign(gap) + pct(gap), cls(gap), 'fa-chart-pie') +
-      stat('Avg RevPAR next 30D', money(rev), chg == null ? '' : sign(chg) + pct(chg) + ' vs past', cls(chg), 'fa-sack-dollar') +
+      stat('Average Next 30D Occupancy', pct(occN), mkN == null ? '' : 'Benchmark ' + pct(mkN) + ', ' + sign(gap) + pct(gap), cls(gap), 'fa-chart-pie') +
+      stat('Avg RevPAR Next 30D', money(rev), chg == null ? '' : sign(chg) + pct(chg) + ' vs past', cls(chg), 'fa-sack-dollar') +
       stat('Flagged listings', need, 'Need attention', need ? 'down' : 'up', 'fa-circle-exclamation') +
       stat('Fully blocked', blocked, 'No past RevPAR', '', 'fa-lock');
 
@@ -327,13 +335,13 @@
     $('mix').innerHTML = gs.map(function (x) {
       var c = statusClass(x.k);
       return '<a class="split-row row-link" href="#/listings/status:' + enc(x.k) + '">' + ind(x.k) + '<div class="track"><div class="fill ' + (c === 'n' ? 'mid' : c) +
-        '" style="width:0" data-w="' + (x.items.length / L.length * 100) + '"></div></div><div class="n">' + x.items.length + '</div>' + chev(1) + '</a>';
+        '" style="width:0" data-w="' + (x.items.length / L.length * 100) + '"></div></div><div class="split-count">' + x.items.length + '</div>' + chev(1) + '</a>';
     }).join('');
     setBars($('mix'));
 
     $('teams').innerHTML = group(L, 'group').sort(function (a, b) { return String(a.k).localeCompare(b.k); }).map(function (x) {
       return olRow(x.k, avg(pluck(x.items, 'occN')), avg(pluck(x.items, 'mkN')), '#/listings/team:' + enc(x.k),
-        x.items.length + ' listings, avg RevPAR next ' + money(avg(pluck(x.items, 'revN'))));
+        x.items.length + ' listings, avg RevPAR Next ' + money(avg(pluck(x.items, 'revN'))));
     }).join('');
     setBars($('teams'));
 
@@ -433,7 +441,7 @@
   }
   function renderRegions() {
     var rows = state.wl.slice().sort(function (a, b) { return String(a.region).localeCompare(String(b.region)); });
-    var heads = ['Region', 'Listings', 'Past 30D', 'Next 15D', 'Next 15D benchmark', 'Next 30D', 'Next 30D benchmark', 'Indicator'];
+    var heads = ['Region', 'Listings', 'Past 30D', 'Next 15D', 'Next 15D Benchmark', 'Next 30D', 'Next 30D Benchmark', 'Indicator'];
     var bar = '<div class="sortbar"><label for="r-sort-by">Sort by</label><select id="r-sort-by">' +
       heads.map(function (h, i) { return '<option value="' + i + '">' + h + '</option>'; }).join('') +
       '</select><button class="icon-btn sort-dir" id="r-sort-dir" aria-label="Reverse order"><i class="fa-solid fa-arrow-up-wide-short"></i></button></div>';
@@ -453,11 +461,11 @@
     }).join('');
     var t = state.tabs[state.tab];
     $('data-wrap').innerHTML = '<div class="count">' + t.rows.length + ' rows</div><div class="table-wrap"><table class="tbl"><thead><tr>' +
-      t.headers.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      t.headers.map(function (h) { return '<th>' + heading(esc(h)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       t.rows.map(function (r) {
         return '<tr>' + r.map(function (c, i) {
           var s = String(c), st = /^(green|yellow|red)$/i.test(s), num = /^[+\-]?\$?[\d,.]+%?$/.test(s);
-          return '<td class="' + (num ? 'num' : '') + '" data-l="' + esc(t.headers[i]) + '"' + (st ? ' data-sv="' + sev(s) + '"' : '') + '>' + (st ? ind(s) : esc(s)) + '</td>';
+          return '<td class="' + (num ? 'num' : '') + '" data-l="' + heading(esc(t.headers[i])) + '"' + (st ? ' data-sv="' + sev(s) + '"' : '') + '>' + (st ? ind(s) : esc(s)) + '</td>';
         }).join('') + '</tr>';
       }).join('') + '</tbody></table></div>';
     enableSort($('data-wrap'));
@@ -616,11 +624,11 @@
     }
     var mp = state.monthly.filter(function (m) { return m.region === name; });
     if (mp.length) {
-      html += panel('Monthly performance', '<div class="table-wrap"><table class="tbl"><thead><tr><th>Month</th><th class="num">Target</th><th class="num">Actual</th><th class="num">Coverage</th><th class="num">Actual vs target</th><th>Review</th></tr></thead><tbody>' +
+      html += panel('Monthly performance', '<div class="table-wrap"><table class="tbl"><thead><tr><th>Month</th><th class="num">Target</th><th class="num">Actual</th><th class="num">Coverage</th><th class="num">Actual vs Target</th><th>Review</th></tr></thead><tbody>' +
         mp.map(function (m) {
           return '<tr><td class="name"><b>' + esc(m.month) + '</b></td><td class="num" data-l="Target">' + esc(m.target || 'n/a') + '</td><td class="num" data-l="Actual">' + esc(m.actual || 'n/a') + '</td>' +
             '<td class="num" data-l="Coverage">' + esc(m.coverage || 'n/a') + '</td>' +
-            '<td class="num ' + cls(pn(m.gap)) + '" data-l="Actual vs target">' + esc(m.gap || 'n/a') + '</td><td data-l="Review" data-sv="' + esc(m.status) + '">' + ind(m.status) + '</td></tr>';
+            '<td class="num ' + cls(pn(m.gap)) + '" data-l="Actual vs Target">' + esc(m.gap || 'n/a') + '</td><td data-l="Review" data-sv="' + esc(m.status) + '">' + ind(m.status) + '</td></tr>';
         }).join('') + '</tbody></table></div>');
     }
     var ls = state.listings.filter(function (l) { return String(l.city).toLowerCase() === String(name).toLowerCase(); });
@@ -629,10 +637,10 @@
   }
 
   function listingTable(ls) {
-    return '<div class="table-wrap"><table class="tbl"><thead><tr><th>Rank</th><th>Listing</th><th class="num">Next 30D</th><th class="num">RevPAR next</th><th>Status</th></tr></thead><tbody>' +
+    return '<div class="table-wrap"><table class="tbl"><thead><tr><th>Rank</th><th>Listing</th><th class="num">Next 30D</th><th class="num">RevPAR Next</th><th>Status</th></tr></thead><tbody>' +
       ls.map(function (l) {
         return '<tr class="clk"' + go('#/listing/' + enc(l.id)) + '><td data-l="Rank">' + (l.rank == null ? 'n/a' : l.rank) + '</td><td class="name"><b>' + esc(l.name) + '</b></td>' +
-          '<td class="num" data-l="Next 30D">' + pct(l.occN) + '</td><td class="num" data-l="RevPAR next">' + money(l.revN) + '</td><td data-l="Status" data-sv="' + esc(l.status) + '">' + ind(l.status) + '</td></tr>';
+          '<td class="num" data-l="Next 30D">' + pct(l.occN) + '</td><td class="num" data-l="RevPAR Next">' + money(l.revN) + '</td><td data-l="Status" data-sv="' + esc(l.status) + '">' + ind(l.status) + '</td></tr>';
       }).join('') + '</tbody></table></div>';
   }
 
@@ -644,7 +652,7 @@
     var d = state.details[String(l.name).trim().toLowerCase()];
     var maxRev = Math.max(l.rev, l.revN, 1);
     var html = '<div class="stats">' + stat('Rank', l.rank == null ? 'n/a' : '#' + l.rank, 'By forward RevPAR', '', 'fa-ranking-star') + stat('Status', ind(l.status), '', '', 'fa-flag') +
-      stat('Type', typeTag(l.type), TYPE[l.type] || 'Other', '', 'fa-house') + stat('Team', teamTag(l.group), esc(l.group || 'No team'), '', 'fa-user-group') +
+      stat('Type', typeTag(l.type), TYPE[l.type] || 'Other', '', 'fa-house') + stat('Team', teamTag(l.group, true), esc(l.group || 'No team'), '', 'fa-user-group') +
       stat('City', esc(l.city || 'n/a'), '', '', 'fa-location-dot') + '</div>';
     html += panel('Occupancy vs benchmark', '<div class="legend"><span><i class="sw sw-fill"></i>Listing</span><span><i class="sw sw-mark"></i>Benchmark</span></div>' +
       olRow('Next 15 days', l.occ15, l.mk15) + olRow('Past 30 days', l.occ, l.mk) + olRow('Next 30 days', l.occN, l.mkN));
@@ -655,7 +663,7 @@
       if (Array.isArray(d)) d = { bedrooms: d[2], base: d[3], recommended: d[4], pickup: d[5], lastBooked: d[6] };
       var base = pn(d.base), rec = pn(d.recommended);
       html += panel('Pricing and bookings', '<div class="stats">' + stat('Base price', money(base), '', '', 'fa-tag') + stat('Recommended base', money(rec), base && rec ? (rec >= base ? '+' : '') + pct((rec / base - 1) * 100) + ' vs base' : '', base && rec ? cls(rec - base) : '', 'fa-wand-magic-sparkles') +
-        stat('Bookings pickup 30D', esc(d.pickup === '' || d.pickup == null ? 'n/a' : d.pickup), '', '', 'fa-calendar-plus') + stat('Last booked', esc(d.lastBooked || 'n/a'), d.bedrooms ? esc(d.bedrooms) + ' bedrooms' : '', '', 'fa-bed') + '</div>');
+        stat('30D Booking Pickup', esc(d.pickup === '' || d.pickup == null ? 'n/a' : d.pickup), '', '', 'fa-calendar-plus') + stat('Last booked', esc(d.lastBooked || 'n/a'), d.bedrooms ? esc(d.bedrooms) + ' bedrooms' : '', '', 'fa-bed') + '</div>');
     }
     var tg = String(l.tags).split(',').map(function (t) { return t.trim(); }).filter(Boolean);
     if (tg.length) html += panel('Tags', '<div class="tagrow">' + tg.map(function (t) { return '<span class="tagchip">' + esc(t) + '</span>'; }).join('') + '</div>');
@@ -729,7 +737,7 @@
   /* ---------- Routing ---------- */
   var TITLES = { overview: 'Dashboard', listings: 'Listings', regions: 'Regions', data: 'Data' };
   function setTitle(t, sub) {
-    $('title').textContent = t;
+    $('title').textContent = heading(t);
     $('rdate').textContent = sub || '';
   }
   function show(view, navView) {
