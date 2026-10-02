@@ -68,7 +68,7 @@ select option{background:#0f2a20;color:#eef6f1}
 .tbl th[aria-sort]{color:var(--green-d)}
 .col-bar{background:linear-gradient(180deg,var(--lime),var(--green))}
 .col.now .col-bar{background:#fff}
-.stat span i{color:var(--green-d)}
+.stat>.stat-label>i{color:var(--green-d)}
 .feed li,.kv li{border-color:var(--line)}
 .badge{border-color:rgba(255,255,255,.25)}
 
