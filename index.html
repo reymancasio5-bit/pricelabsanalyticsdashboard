@@ -1,14 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="glass">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#091710">
 <title>Property Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="glass.css" id="glass-css">
+<script>try{if(localStorage.getItem('pd-theme')==='classic')document.getElementById('glass-css').disabled=true}catch(e){}</script>
 </head>
 <body>
 <div class="app">
@@ -19,6 +22,7 @@
       <button class="nav-btn active" data-view="overview"><i class="fa-solid fa-table-columns"></i><span>Dashboard</span></button>
       <button class="nav-btn" data-view="listings"><i class="fa-solid fa-house"></i><span>Listings</span></button>
       <button class="nav-btn" data-view="regions"><i class="fa-solid fa-location-dot"></i><span>Regions</span></button>
+      <button class="nav-btn" data-view="data"><i class="fa-solid fa-database"></i><span>Data</span></button>
     </nav>
     <div class="side-note">
       <i class="fa-solid fa-clock-rotate-left"></i>
@@ -32,6 +36,7 @@
     <header class="top">
       <button class="icon-btn menu" id="menu" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>
       <div class="ttl"><h1 id="title">Dashboard</h1><p id="rdate"></p></div>
+      <button class="icon-btn" id="theme" aria-label="Switch style" aria-pressed="false"><i class="fa-solid fa-circle-half-stroke"></i></button>
       <button class="icon-btn" id="refresh" aria-label="Refresh data"><i class="fa-solid fa-rotate"></i></button>
     </header>
 
@@ -61,10 +66,12 @@
         </article>
       </div>
 
+      <div class="stats" id="pulse"></div>
+
       <article class="panel">
         <div class="panel-h">
           <h2>Actual vs benchmark</h2><p class="hint">Select a row for details</p>
-          <span class="pill n" id="health">Health</span>
+          <span class="health" id="health"></span>
         </div>
         <div class="legend"><span><i class="sw sw-fill"></i>Actual</span><span><i class="sw sw-mark"></i>Benchmark</span></div>
         <div id="outlook"></div>
@@ -81,6 +88,33 @@
           <ul class="kv" id="kv"></ul>
         </article>
       </div>
+
+      <div class="duo">
+        <article class="panel">
+          <h2>Listing status</h2><p class="hint">Select a row to filter listings</p>
+          <div id="mix"></div>
+        </article>
+        <article class="panel">
+          <h2>Teams</h2><p class="hint">Next 30D occupancy vs market</p>
+          <div id="teams"></div>
+        </article>
+      </div>
+
+      <div class="duo">
+        <article class="panel">
+          <h2>Top cities</h2><p class="hint">Next 30D occupancy vs market</p>
+          <div id="cities"></div>
+        </article>
+        <article class="panel">
+          <h2>RevPAR movers</h2><p class="hint">Next 30D vs past 30D</p>
+          <ul class="feed" id="movers"></ul>
+        </article>
+      </div>
+
+      <article class="panel">
+        <h2>AM actions</h2><p class="hint">Regions with open follow-ups</p>
+        <ul class="feed" id="acts"></ul>
+      </article>
     </section>
 
     <section class="view" id="view-listings" hidden>
@@ -93,6 +127,7 @@
         <div class="filters">
           <label class="field grow"><i class="fa-solid fa-magnifying-glass"></i><input type="search" id="q" placeholder="Search listing"></label>
           <select id="f-city" aria-label="City"><option value="">All cities</option></select>
+          <select id="f-team" aria-label="Team"><option value="">All teams</option></select>
           <select id="f-status" aria-label="Status"><option value="">All statuses</option></select>
         </div>
         <div class="sortbar"><label for="sort-by">Sort by</label><select id="sort-by"></select><button class="icon-btn sort-dir" id="sort-dir" aria-label="Reverse order"><i class="fa-solid fa-arrow-up-wide-short"></i></button></div>
@@ -103,13 +138,12 @@
               <th data-sort="rank">Rank</th>
               <th data-sort="name">Listing</th>
               <th data-sort="city">City</th>
+              <th data-sort="group">Team</th>
               <th data-sort="type">Type</th>
               <th data-sort="occ15" class="num">Occ. next 15D</th>
               <th data-sort="occ" class="num">Occ. past 30D</th>
               <th data-sort="occN" class="num">Occ. next 30D</th>
-              <th data-sort="rev" class="num">RevPAR past</th>
-              <th data-sort="revN" class="num">RevPAR next</th>
-              <th data-sort="chg" class="num">Change</th>
+              <th data-sort="gapN" class="num">Gap</th>
               <th data-sort="status">Status</th>
             </tr></thead>
             <tbody></tbody>
@@ -126,11 +160,18 @@
       </article>
     </section>
 
+    <section class="view" id="view-data" hidden>
+      <article class="panel">
+        <div class="chips" id="data-tabs"></div>
+        <div id="data-wrap"></div>
+      </article>
+    </section>
+
     <section class="view" id="view-detail" hidden>
       <div id="detail"></div>
     </section>
   </main>
 </div>
-<script src="script.js"></script>
+<script src="script.js?v=20261002-sheet-schema2"></script>
 </body>
 </html>
