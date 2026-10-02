@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="glass.css" id="glass-css">
+<link rel="stylesheet" href="styles.css?v=20261002-desktop-layout">
+<link rel="stylesheet" href="glass.css?v=20261002-dashboard-polish" id="glass-css">
 <script>try{if(localStorage.getItem('pd-theme')==='classic')document.getElementById('glass-css').disabled=true}catch(e){}</script>
 </head>
 <body>
@@ -45,22 +45,22 @@
     <section class="view" id="view-overview">
       <div class="cards">
         <article class="card hero clk" data-go="#/horizon/past" tabindex="0" role="link">
-          <div class="card-h"><span>Past 30D occupancy</span><i class="fa-solid fa-chart-line badge"></i></div>
+          <div class="card-h"><span>Past 30D Occupancy</span><i class="fa-solid fa-chart-line badge"></i></div>
           <div class="big" id="k-past">0%</div>
           <div class="sub" id="k-past-sub">Actual</div>
         </article>
         <article class="card clk" data-go="#/horizon/30" tabindex="0" role="link">
-          <div class="card-h"><span>Next 30D occupancy</span><i class="fa-solid fa-calendar-days badge"></i></div>
+          <div class="card-h"><span>Next 30D Occupancy</span><i class="fa-solid fa-calendar-days badge"></i></div>
           <div class="big" id="k-next">0%</div>
           <div class="sub" id="k-next-sub">Benchmark 0%</div>
         </article>
         <article class="card clk" data-go="#/horizon/30" tabindex="0" role="link">
-          <div class="card-h"><span>Change vs target</span><i class="fa-solid fa-bullseye badge"></i></div>
+          <div class="card-h"><span>Change vs Target</span><i class="fa-solid fa-bullseye badge"></i></div>
           <div class="big" id="k-gap">0%</div>
           <div class="sub" id="k-gap-sub">Next 30D vs benchmark</div>
         </article>
         <article class="card clk" data-go="#/kpi/Total%20Active%20Listings" tabindex="0" role="link">
-          <div class="card-h"><span>Active listings</span><i class="fa-solid fa-house badge"></i></div>
+          <div class="card-h"><span>Active Listings</span><i class="fa-solid fa-house badge"></i></div>
           <div class="big" id="k-active">0</div>
           <div class="sub" id="k-active-sub">Portfolio total</div>
         </article>
@@ -70,7 +70,7 @@
 
       <article class="panel">
         <div class="panel-h">
-          <h2>Actual vs benchmark</h2><p class="hint">Select a row for details</p>
+          <h2>Actual vs Benchmark</h2><p class="hint">Select a row for details</p>
           <span class="health" id="health"></span>
         </div>
         <div class="legend"><span><i class="sw sw-fill"></i>Actual</span><span><i class="sw sw-mark"></i>Benchmark</span></div>
@@ -79,11 +79,11 @@
 
       <div class="duo">
         <article class="panel">
-          <h2>Risk indicators</h2><p class="hint">Select an item for details</p>
+          <h2>Risk Indicators</h2><p class="hint">Select a risk indicator to view details</p>
           <ul class="feed" id="risks"></ul>
         </article>
         <article class="panel">
-          <h2>Region status</h2><p class="hint">Select an item for details</p>
+          <h2>Region Status</h2><p class="hint">Select an item for details</p>
           <div id="status-split"></div>
           <ul class="kv" id="kv"></ul>
         </article>
@@ -91,28 +91,28 @@
 
       <div class="duo">
         <article class="panel">
-          <h2>Listing status</h2><p class="hint">Select a row to filter listings</p>
+          <h2>Listing Status</h2><p class="hint">Select a row to filter listings</p>
           <div id="mix"></div>
         </article>
         <article class="panel">
-          <h2>Teams</h2><p class="hint">Next 30D occupancy vs market</p>
+          <h2>Teams</h2><p class="hint">Next 30-day occupancy compared with the benchmark</p>
           <div id="teams"></div>
         </article>
       </div>
 
       <div class="duo">
         <article class="panel">
-          <h2>Top cities</h2><p class="hint">Next 30D occupancy vs market</p>
+          <h2>Top Cities</h2><p class="hint">Next 30-day occupancy compared with the benchmark</p>
           <div id="cities"></div>
         </article>
         <article class="panel">
-          <h2>RevPAR movers</h2><p class="hint">Next 30D vs past 30D</p>
+          <h2>RevPAR Movers</h2><p class="hint">Next 30D vs past 30D</p>
           <ul class="feed" id="movers"></ul>
         </article>
       </div>
 
       <article class="panel">
-        <h2>AM actions</h2><p class="hint">Regions with open follow-ups</p>
+        <h2>AM Actions</h2><p class="hint">Regions requiring attention or follow-up</p>
         <ul class="feed" id="acts"></ul>
       </article>
     </section>
@@ -140,9 +140,9 @@
               <th data-sort="city">City</th>
               <th data-sort="group">Team</th>
               <th data-sort="type">Type</th>
-              <th data-sort="occ15" class="num">Occ. next 15D</th>
-              <th data-sort="occ" class="num">Occ. past 30D</th>
-              <th data-sort="occN" class="num">Occ. next 30D</th>
+              <th data-sort="occ15" class="num">Occ. Next 15D</th>
+              <th data-sort="occ" class="num">Occ. Past 30D</th>
+              <th data-sort="occN" class="num">Occ. Next 30D</th>
               <th data-sort="gapN" class="num">Gap</th>
               <th data-sort="status">Status</th>
             </tr></thead>
@@ -172,6 +172,6 @@
     </section>
   </main>
 </div>
-<script src="script.js?v=20261002-sheet-schema2"></script>
+<script src="script.js?v=20261002-desktop-layout"></script>
 </body>
 </html>
