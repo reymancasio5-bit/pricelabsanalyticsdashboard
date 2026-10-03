@@ -1,0 +1,3 @@
+Generated with the built-in image_gen tool.
+
+Use case: logo-brand. Asset type: square website favicon for Portfolio Desk, a property analytics dashboard. Create a crisp minimal mint-green building symbol on a solid deep forest-green (#091710) square background. Single bold geometric building silhouette with three large dark window cutouts, subtly suggesting an ascending analytics chart. Mint color #a9e6bf. Flat graphic, centered, occupy 75 percent of the square, generous clear edges, strong contrast and extremely simple shapes readable at 16 pixels. No text, no letters, no fine lines, no shadows, no mockup, no border. Output one square icon.
