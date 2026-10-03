@@ -282,6 +282,15 @@ a{color:inherit}
   .tbl td.name{display:block;text-align:left;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:4px}
   .tbl td.name:before{display:none}
   .tbl td.empty{display:block;text-align:center}
+  /* Override desktop column widths and align every listing value. */
+  #tbl-listings td:nth-child(n){width:100%}
+  #tbl-listings td{display:grid;grid-template-columns:108px minmax(0,1fr);column-gap:12px;row-gap:3px;padding:8px 0;text-align:left;white-space:normal;justify-items:start;overflow-wrap:anywhere}
+  #tbl-listings td:before{grid-column:1;grid-row:1;margin:0}
+  #tbl-listings td.occ .mk{grid-column:2;text-align:left}
+  #tbl-listings td.name{display:block;padding-bottom:10px;margin-bottom:6px}
+  #tbl-listings td.empty{display:block;text-align:center}
+  .lead-link .more{gap:8px}
+  .lead-link .more>i{flex-shrink:0}
 }
 /* Small and feature phones */
 @media (max-width:360px){
