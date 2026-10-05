@@ -6,8 +6,24 @@
   --red-bg:#fbe9e6;--amber-bg:#fbf1dc;--ok-bg:#e3f2e6;
   --r:18px;--shadow:0 1px 2px rgba(16,40,28,.05),0 8px 24px rgba(16,40,28,.06);
   --ease:cubic-bezier(.2,.7,.2,1);
+  --scrollbar-track:#e5ece7;--scrollbar-thumb:#688774;--scrollbar-hover:#477457;--scrollbar-active:#0d5a38;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* Shared by the page and every scrollable table, panel, and navigation area. */
+@media (forced-colors:none){
+  *{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track)}
+  /* Use detailed styling where supported; Firefox keeps the native thin variant. */
+  @supports selector(::-webkit-scrollbar){
+    *{scrollbar-width:auto;scrollbar-color:auto}
+    ::-webkit-scrollbar{width:12px;height:12px}
+    ::-webkit-scrollbar-track{background:var(--scrollbar-track);border-radius:999px}
+    ::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border:3px solid var(--scrollbar-track);border-radius:999px;min-height:36px;min-width:36px}
+    ::-webkit-scrollbar-thumb:hover{background:var(--scrollbar-hover)}
+    ::-webkit-scrollbar-thumb:active{background:var(--scrollbar-active)}
+    ::-webkit-scrollbar-corner{background:var(--scrollbar-track)}
+    ::-webkit-scrollbar-button{display:none;width:0;height:0}
+  }
+}
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Manrope",Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;overflow-x:hidden}
 button,input,select{font:inherit;color:inherit}

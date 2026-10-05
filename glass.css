@@ -8,6 +8,7 @@
   --ok-bg:rgba(110,231,160,.16);--amber-bg:rgba(251,191,77,.16);--red-bg:rgba(255,138,122,.16);
   --shadow:0 14px 38px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.07);
   --blur:blur(16px) saturate(135%);
+  --scrollbar-track:#142e21;--scrollbar-thumb:#608d73;--scrollbar-hover:#81b794;--scrollbar-active:#a9e6bf;
 }
 body{
   background:#091710;
