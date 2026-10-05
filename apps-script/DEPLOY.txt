@@ -1,0 +1,36 @@
+Replace the bound spreadsheet project's Code.gs with apps-script/Code.gs.
+Save, then choose Deploy > Manage deployments > Edit (pencil) > New version > Deploy.
+Keep the existing deployment URL and access settings. No new services or triggers are required.
+Publish the updated index.html, script.js, and styles.css through your normal website deployment.
+
+Behavior
+- Server responses are cached for 300 seconds. Change CACHE_SECONDS to adjust freshness.
+- Refresh sends fresh=1 and forces a new spreadsheet read, then replaces the cache.
+- Normal requests can send since=<version>; matching cached versions return a small notModified response.
+- Requests without these parameters still receive the complete, compatible schemaVersion 2 response.
+- Large responses are split across cache entries. Missing chunks and unavailable cache fall back to rebuilding.
+- Authentication is checked before serving cached data. Errors are never cached.
+- Change CACHE_KEY when changing server response-building code to avoid serving an older cached schema.
+- The browser keeps a successful response in sessionStorage for up to 15 minutes and rechecks the API on reload.
+- The sidebar retains the response generation time; a message identifies saved data while refreshing or offline.
+- Automatic refresh runs every five minutes while the page is visible. Manual Refresh always remains available after a request ends.
+- First visits show the skeleton. Repeat visits within the same browser session can display the last response immediately.
+- Extra Data tables are rendered when the Data view is opened, avoiding unnecessary initial DOM work.
+- Each browser request has a unique requestId to avoid reusing a temporary Google redirect URL.
+- HTTP 404 responses are retried once within the existing timeout. This does not bypass the server cache.
+
+Validation
+Run: node tests/api-performance.cjs
+Run: node tests/loading-cache.cjs
+Run: node --check script.js
+
+Local tests cover the cache, schema, raw percentage conversion, duplicate visual-bar headers,
+forced refresh, conditional responses, eviction, expiry, Unicode chunks, lock cleanup,
+browser loading/error states, stale snapshots, and compatibility with the old deployed API.
+The optimized builder also matched the original on the saved workbook fixture (418 listings;
+Regional Performance was absent from the fixture, so that sheet used a synthetic fallback).
+Live Apps Script execution time must be measured after deployment; local timings exclude Google service latency.
+
+Google references
+https://developers.google.com/apps-script/guides/support/best-practices
+https://developers.google.com/apps-script/reference/cache/cache

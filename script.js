@@ -5,6 +5,8 @@
   var API_URL = 'https://script.google.com/macros/s/AKfycbyu8Cl-OooWP5zSxAIe09X1aZWNKmaumCJR9ZQIVWZHabQ5wLA2Qa8AUNxLwiYwaOhg/exec';
   var API_TOKEN = 'e5f2a9b8c3d7e1f0a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1';
   var REFRESH_MS = 5 * 60 * 1000;
+  var SNAPSHOT_MAX_AGE = 15 * 60 * 1000;
+  var SNAPSHOT_KEY = 'pd-snapshot-v1:' + API_URL + ':' + API_TOKEN;
   var PAGE_SIZE = 25;
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   var TABICON = { 'Regional Performance': 'fa-map-location-dot', 'AM Action Inputs': 'fa-clipboard-list', 'Monthly Inputs': 'fa-calendar-check', 'Management Inputs': 'fa-sliders', 'Legend': 'fa-palette' };
@@ -146,36 +148,95 @@
     state.actions = data.regions || [];
     state.details = data.details || {};
     state.tabs = data.tabs || {};
+    state.dataDirty = true;
     $('updated').textContent = data.updated ? new Date(data.updated).toLocaleString() : 'Unknown';
   }
 
-  function load() {
-    var btn = $('refresh');
+  function restoreSnapshot() {
+    try {
+      var saved = JSON.parse(sessionStorage.getItem(SNAPSHOT_KEY) || 'null');
+      if (!saved || !saved.data || !saved.data.ok || !Array.isArray(saved.data.listings) ||
+          !saved.savedAt || Date.now() - saved.savedAt > SNAPSHOT_MAX_AGE || saved.savedAt > Date.now()) return;
+      normalize(saved.data);
+      renderAll();
+      state.loaded = true;
+      state.version = saved.data.version || '';
+      route(true);
+    } catch (err) {
+      // Storage may be blocked, full, or contain an older incompatible response.
+      state.loaded = false;
+      state.version = '';
+      try { sessionStorage.removeItem(SNAPSHOT_KEY); } catch (ignore) {}
+    }
+  }
+
+  function setLoading(loading) {
+    state.loading = loading;
+    $('dashboard-skeleton').hidden = !loading || state.loaded;
+    $('loading-status').textContent = state.loaded ? 'Showing last loaded data. Checking for updates…' : 'Loading dashboard data…';
+    $('loading-status').hidden = !loading;
+    $('dashboard-content').hidden = !state.loaded;
+    $('dashboard-content').setAttribute('aria-busy', String(loading));
+    $('refresh').disabled = loading;
+    $('refresh').className = 'icon-btn' + (loading ? ' spin' : '');
+    if (loading) $('refresh').setAttribute('aria-busy', 'true');
+    else $('refresh').removeAttribute('aria-busy');
+  }
+
+  function fetchDashboard(url, signal, retried) {
+    // ContentService redirects to a temporary response URL. A unique request URL
+    // prevents reuse of an expired redirect without bypassing our Apps Script cache.
+    var requestUrl = url + (url.indexOf('?') > -1 ? '&' : '?') +
+      'requestId=' + Date.now() + '-' + Math.random().toString(36).slice(2);
+    return fetch(requestUrl, { signal: signal, cache: 'no-store', redirect: 'follow', credentials: 'omit' }).then(function (res) {
+      if (res.status === 404 && !retried) return fetchDashboard(url, signal, true);
+      if (!res.ok) {
+        if (res.status === 404) {
+          var responseHost = '';
+          try { responseHost = new URL(res.url).hostname; } catch (ignore) {}
+          throw new Error(responseHost === 'script.googleusercontent.com' ?
+            'Google could not deliver the Apps Script response (HTTP 404), even after retrying' :
+            'The Apps Script web app could not be reached (HTTP 404). Check that API_URL matches the active deployment’s /exec URL');
+        }
+        throw new Error('The data service returned HTTP ' + res.status);
+      }
+      return res.json();
+    });
+  }
+
+  function load(forceFresh) {
     if (state.loading) return;
     if (!API_URL || API_URL.indexOf('PASTE_') === 0) {
+      setLoading(false);
       showNotice('Set <code>API_URL</code> in script.js to your Apps Script web app URL.', false);
       return;
     }
-    state.loading = true;
-    btn.className = 'icon-btn spin';
-    btn.setAttribute('aria-busy', 'true');
+    setLoading(true);
+    showNotice('', false);
     var url = API_URL + (API_TOKEN ? (API_URL.indexOf('?') > -1 ? '&' : '?') + 'token=' + encodeURIComponent(API_TOKEN) : '');
-    fetch(url).then(function (res) {
-      if (!res.ok) throw new Error('The data service returned HTTP ' + res.status);
-      return res.json();
-    }).then(function (data) {
+    if (forceFresh === true) url += (url.indexOf('?') > -1 ? '&' : '?') + 'fresh=1';
+    else if (state.loaded && state.version) url += (url.indexOf('?') > -1 ? '&' : '?') + 'since=' + encodeURIComponent(state.version);
+    var controller = new AbortController();
+    var timeout = setTimeout(function () { controller.abort(); }, 60000);
+    fetchDashboard(url, controller.signal, false).then(function (data) {
       if (!data.ok) throw new Error(data.error || 'The API returned an error');
+      if (data.notModified && state.loaded && data.version === state.version) return;
+      if (data.notModified || !Array.isArray(data.listings)) throw new Error('The API returned an incomplete response');
+      // Capture the original response before normalization enriches it in memory.
+      var snapshot = JSON.stringify({ savedAt: Date.now(), data: data });
       normalize(data);
-      state.loaded = true;
       showNotice(state.schemaVersion < 2 ? 'Some listing occupancy and detail data are unavailable. The data connection needs an update.' : '', false);
       renderAll();
+      state.loaded = true;
+      state.version = data.version || '';
       route(true);
+      try { sessionStorage.setItem(SNAPSHOT_KEY, snapshot); } catch (ignore) {}
     }).catch(function (err) {
-      showNotice('Could not load data. ' + esc(err.message) + '. Check the web app URL and that access is set to Anyone.', true);
+      var reason = err.name === 'AbortError' ? 'The request timed out' : esc(err.message);
+      showNotice((state.loaded ? 'Could not refresh data. Showing last loaded data. ' : 'Could not load data. ') + reason + '. Use Refresh to try again.', true);
     }).then(function () {
-      state.loading = false;
-      btn.className = 'icon-btn';
-      btn.removeAttribute('aria-busy');
+      clearTimeout(timeout);
+      setLoading(false);
     });
   }
 
@@ -453,6 +514,7 @@
 
   /* Extra tabs (Regional Performance, AM Action Inputs, Monthly Inputs, Legend) */
   function renderData() {
+    state.dataDirty = false;
     var names = Object.keys(state.tabs);
     if (!names.length) { $('data-tabs').innerHTML = ''; $('data-wrap').innerHTML = '<p class="empty">No extra tabs were returned by the API.</p>'; return; }
     if (!state.tabs[state.tab]) state.tab = names[0];
@@ -470,7 +532,7 @@
       }).join('') + '</tbody></table></div>';
     enableSort($('data-wrap'));
   }
-  function renderAll() { renderOverview(); renderInsights(); renderFilters(); renderListings(); renderRegions(); renderData(); }
+  function renderAll() { renderOverview(); renderInsights(); renderFilters(); renderListings(); renderRegions(); }
 
   /* ---------- Detail pages ---------- */
   function regionBars(list, horizon) {
@@ -750,6 +812,7 @@
     var p = location.hash.replace(/^#\/?/, '').split('/');
     var kind = p[0] || 'overview', arg = p[1] ? decodeURIComponent(p[1]) : '';
     if (TITLES[kind]) {
+      if (kind === 'data' && state.loaded && state.dataDirty) renderData();
       if (kind === 'listings' && arg && state.loaded) applyFilter(arg);
       show(kind, kind);
       setTitle(TITLES[kind], kind === 'overview' && state.ov && state.ov.reportDate ? 'Reporting date: ' + state.ov.reportDate : '');
@@ -798,7 +861,7 @@
   });
   $('menu').addEventListener('click', openMenu);
   $('scrim').addEventListener('click', closeMenu);
-  $('refresh').addEventListener('click', load);
+  $('refresh').addEventListener('click', function () { load(true); });
   var glassOn = document.documentElement.getAttribute('data-theme') === 'glass';
   try {
     var savedTheme = localStorage.getItem('pd-theme');
@@ -855,6 +918,7 @@
   });
 
   route();
+  restoreSnapshot();
   load();
-  setInterval(load, REFRESH_MS);
+  setInterval(function () { if (!document.hidden) load(); }, REFRESH_MS);
 })();
