@@ -7,12 +7,11 @@
   var REFRESH_MS = 5 * 60 * 1000;
   var SNAPSHOT_MAX_AGE = 15 * 60 * 1000;
   var SNAPSHOT_KEY = 'pd-snapshot-v1:' + API_URL + ':' + API_TOKEN;
-  var PAGE_SIZE = 25;
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   var TABICON = { 'Regional Performance': 'fa-map-location-dot', 'AM Action Inputs': 'fa-clipboard-list', 'Monthly Inputs': 'fa-calendar-check', 'Management Inputs': 'fa-sliders', 'Legend': 'fa-palette' };
 
   var state = { ov: null, listings: [], wl: [], setup: {}, monthly: [], actions: [], details: {}, tabs: {}, tab: '',
-    type: 'all', shown: PAGE_SIZE, sort: 'rank', asc: true, loaded: false, loading: false };
+    type: 'all', listingsPage: 0, regionsPage: 0, sort: 'rank', asc: true, loaded: false, loading: false };
   var navCount = 0;
 
   /* ---------- Helpers ---------- */
@@ -460,7 +459,7 @@
     return '<span class="' + c + '">' + pct(v) + '</span>' + (m != null ? '<span class="mk">Benchmark ' + pct(m) + '</span>' : '');
   }
   function renderListings() {
-    var rows = filtered(), part = rows.slice(0, state.shown);
+    var rows = filtered(), part = batchRows('listings', rows);
     var headers = $('tbl-listings').querySelectorAll('th[data-sort]');
     $('count').textContent = rows.length.toLocaleString('en-US') + ' listings. Select a listing for details.';
     $('tbl-listings').getElementsByTagName('tbody')[0].innerHTML = part.map(function (l) {
@@ -478,7 +477,6 @@
           (key === 'status' ? ' data-sv="' + esc(l.status) + '"' : '') + '>' + cell[1] + '</td>';
       }).join('') + '</tr>';
     }).join('') || '<tr><td class="empty" colspan="' + headers.length + '">No listings match.</td></tr>';
-    $('more').hidden = rows.length <= state.shown;
     var ths = $('tbl-listings').querySelectorAll('th[data-sort]');
     for (var i = 0; i < ths.length; i++) {
       var on = ths[i].getAttribute('data-sort') === state.sort;
@@ -498,33 +496,73 @@
     var k = arg.slice(0, i), v = arg.slice(i + 1);
     $('q').value = ''; $('f-city').value = ''; $('f-status').value = ''; $('f-team').value = ''; state.type = 'all';
     if (k === 'city') $('f-city').value = v; else if (k === 'status') $('f-status').value = v; else if (k === 'team') $('f-team').value = v;
-    state.shown = PAGE_SIZE; setChip(); renderListings();
+    state.listingsPage = 0; setChip(); renderListings();
+  }
+  function batchRows(view, rows) {
+    var size = state[view + 'PageSize'] || 20;
+    var pages = Math.max(1, Math.ceil(rows.length / size));
+    var page = Math.max(0, Math.min(state[view + 'Page'] || 0, pages - 1));
+    state[view + 'Page'] = page;
+    var start = page * size, end = Math.min(start + size, rows.length);
+    $(view + '-page-size').value = String(size);
+    $(view + '-page-info').textContent = rows.length ? 'Rows ' + (start + 1) + '–' + end + ' of ' + rows.length + ' · Batch ' + (page + 1) + ' of ' + pages : '0 rows';
+    $(view + '-prev').disabled = page === 0;
+    $(view + '-next').disabled = page >= pages - 1;
+    return rows.slice(start, end);
   }
   function renderRegions() {
-    var rows = state.wl.slice().sort(function (a, b) { return String(a.region).localeCompare(String(b.region)); });
+    var rs = state.rsort || { ci: 0, asc: true };
+    var keys = ['region', 'act', 'past', 'n14', 'b14', 'next', 'b30'];
+    var rows = state.wl.map(function (r, i) {
+      var value = rs.ci === 7 ? sev(regionIndicator(r)) : r[keys[rs.ci]];
+      return { r: r, n: i, v: sortValue(value == null ? '' : value) };
+    }).sort(function (a, b) { return compareCells(a, b, rs.asc); }).map(function (item) { return item.r; });
     var heads = ['Region', 'Listings', 'Past 30D', 'Next 15D', 'Next 15D Benchmark', 'Next 30D', 'Next 30D Benchmark', 'Indicator'];
     var bar = '<div class="sortbar"><label for="r-sort-by">Sort by</label><select id="r-sort-by">' +
       heads.map(function (h, i) { return '<option value="' + i + '">' + h + '</option>'; }).join('') +
       '</select><button class="icon-btn sort-dir" id="r-sort-dir" aria-label="Reverse order"><i class="fa-solid fa-arrow-up-wide-short"></i></button></div>';
-    $('regions-wrap').innerHTML = bar + regionTable(rows);
+    $('regions-wrap').innerHTML = bar + regionTable(batchRows('regions', rows));
     enableSort($('regions-wrap'));
-    var rs = state.rsort || { ci: 0, asc: true };
-    sortBy($('regions-wrap').getElementsByTagName('table')[0], rs.ci, rs.asc);
+    var table = $('regions-wrap').getElementsByTagName('table')[0];
+    if (table) {
+      table.id = 'tbl-regions';
+      table.tHead.rows[0].cells[rs.ci].setAttribute('aria-sort', rs.asc ? 'ascending' : 'descending');
+      table.parentNode.setAttribute('tabindex', '0');
+      table.parentNode.setAttribute('role', 'region');
+      table.parentNode.setAttribute('aria-label', 'Regions table');
+    }
+    $('r-sort-by').value = rs.ci;
+    $('r-sort-dir').className = 'icon-btn sort-dir' + (rs.asc ? '' : ' desc');
   }
 
   /* Extra tabs (Regional Performance, AM Action Inputs, Monthly Inputs, Legend) */
   function renderData() {
     state.dataDirty = false;
     var names = Object.keys(state.tabs);
+    $('data-pagination').hidden = !names.length;
     if (!names.length) { $('data-tabs').innerHTML = ''; $('data-wrap').innerHTML = '<p class="empty">No extra tabs were returned by the API.</p>'; return; }
-    if (!state.tabs[state.tab]) state.tab = names[0];
+    if (!state.tabs[state.tab]) { state.tab = names[0]; state.dataPage = 0; state.dataSort = null; }
     $('data-tabs').innerHTML = names.map(function (n) {
       return '<button class="chip' + (n === state.tab ? ' active' : '') + '" data-tab="' + esc(n) + '"><i class="fa-solid ' + (TABICON[n] || 'fa-table') + '"></i>' + esc(n) + '</button>';
     }).join('');
     var t = state.tabs[state.tab];
-    $('data-wrap').innerHTML = '<div class="count">' + t.rows.length + ' rows</div><div class="table-wrap"><table class="tbl"><thead><tr>' +
-      t.headers.map(function (h) { return '<th>' + heading(esc(h)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
-      t.rows.map(function (r) {
+    var size = state.dataPageSize || 20, rows = t.rows.slice(), sort = state.dataSort;
+    if (sort && sort.ci < t.headers.length) {
+      rows = rows.map(function (r, i) {
+        var value = String(r[sort.ci] == null ? '' : r[sort.ci]);
+        return { r: r, n: i, v: sortValue(/^(green|yellow|red)$/i.test(value) ? String(sev(value)) : value) };
+      }).sort(function (a, b) { return compareCells(a, b, sort.asc); }).map(function (item) { return item.r; });
+    }
+    var pages = Math.max(1, Math.ceil(rows.length / size));
+    state.dataPage = Math.max(0, Math.min(state.dataPage || 0, pages - 1));
+    var start = state.dataPage * size, end = Math.min(start + size, rows.length);
+    $('data-page-size').value = String(size);
+    $('data-page-info').textContent = rows.length ? 'Rows ' + (start + 1) + '–' + end + ' of ' + rows.length + ' · Batch ' + (state.dataPage + 1) + ' of ' + pages : '0 rows';
+    $('data-prev').disabled = state.dataPage === 0;
+    $('data-next').disabled = state.dataPage >= pages - 1;
+    $('data-wrap').innerHTML = '<div class="table-wrap" tabindex="0" role="region" aria-label="' + esc(state.tab) + ' data table"><table class="tbl" id="tbl-data"><thead><tr>' +
+      t.headers.map(function (h, i) { return '<th' + (sort && sort.ci === i ? ' aria-sort="' + (sort.asc ? 'ascending' : 'descending') + '"' : '') + '>' + heading(esc(h)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      rows.slice(start, end).map(function (r) {
         return '<tr>' + r.map(function (c, i) {
           var s = String(c), st = /^(green|yellow|red)$/i.test(s), num = /^[+\-]?\$?[\d,.]+%?$/.test(s);
           return '<td class="' + (num ? 'num' : '') + '" data-l="' + heading(esc(t.headers[i])) + '"' + (st ? ' data-sv="' + sev(s) + '"' : '') + '>' + (st ? ind(s) : esc(s)) + '</td>';
@@ -761,20 +799,39 @@
 
   /* ---------- Sortable tables ---------- */
   function cellVal(c) {
-    var t = String(c.getAttribute('data-sv') || c.textContent).replace(/\s+/g, ' ').trim();
+    return sortValue(c.getAttribute('data-sv') || c.textContent);
+  }
+  function sortValue(value) {
+    var t = String(value).replace(/\s+/g, ' ').trim();
     var low = t.toLowerCase();
     if (/^[+\-]?\$?\d[\d,]*(\.\d+)?\s*%?$/.test(t)) return { n: parseFloat(t.replace(/[^0-9.\-]/g, '')) };
     return { s: low, na: low === '' || low === 'n/a' || low === 'none' };
   }
+  function compareCells(a, b, asc) {
+    if (!!a.v.na !== !!b.v.na) return a.v.na ? 1 : -1;
+    var d;
+    if (a.v.n != null && b.v.n != null) d = a.v.n - b.v.n;
+    else d = String(a.v.s != null ? a.v.s : a.v.n).localeCompare(String(b.v.s != null ? b.v.s : b.v.n));
+    return d ? (asc ? d : -d) : a.n - b.n;
+  }
   function sortBy(table, ci, asc) {
+    if (!table) return;
+    if (table.id === 'tbl-regions') {
+      state.rsort = { ci: ci, asc: asc };
+      state.regionsPage = 0;
+      renderRegions();
+      return;
+    }
+    if (table.id === 'tbl-data') {
+      state.dataSort = { ci: ci, asc: asc };
+      state.dataPage = 0;
+      renderData();
+      return;
+    }
     var tb = table.tBodies[0], rows = [].slice.call(tb.rows), i;
     var keyed = rows.map(function (r, n) { return { r: r, v: cellVal(r.cells[ci]), n: n }; });
     keyed.sort(function (a, b) {
-      if (a.v.na !== b.v.na) return a.v.na ? 1 : -1;
-      var d;
-      if (a.v.n != null && b.v.n != null) d = a.v.n - b.v.n;
-      else d = String(a.v.s != null ? a.v.s : a.v.n).localeCompare(String(b.v.s != null ? b.v.s : b.v.n));
-      return d ? (asc ? d : -d) : a.n - b.n;
+      return compareCells(a, b, asc);
     });
     keyed.forEach(function (k) { tb.appendChild(k.r); });
     var ths = table.tHead.rows[0].cells;
@@ -873,7 +930,7 @@
     var b = e.target; while (b && b !== this && !b.getAttribute('data-type')) b = b.parentNode;
     if (!b || !b.getAttribute) return;
     state.type = b.getAttribute('data-type');
-    state.shown = PAGE_SIZE;
+    state.listingsPage = 0;
     setChip();
     renderListings();
   });
@@ -881,24 +938,52 @@
     var b = e.target; while (b && b !== this && !b.getAttribute('data-tab')) b = b.parentNode;
     if (!b || !b.getAttribute) return;
     state.tab = b.getAttribute('data-tab');
+    state.dataPage = 0;
+    state.dataSort = null;
     renderData();
   });
-  ['q', 'f-city', 'f-team', 'f-status'].forEach(function (id) {
-    $(id).addEventListener(id === 'q' ? 'input' : 'change', function () { state.shown = PAGE_SIZE; renderListings(); });
+  $('data-page-size').addEventListener('change', function () {
+    var size = Number(this.value);
+    if ([20, 50, 100, 200].indexOf(size) === -1) return;
+    state.dataPageSize = size;
+    state.dataPage = 0;
+    renderData();
   });
-  $('more').addEventListener('click', function () { state.shown += PAGE_SIZE; renderListings(); });
+  $('data-prev').addEventListener('click', function () { state.dataPage = Math.max(0, (state.dataPage || 0) - 1); renderData(); });
+  $('data-next').addEventListener('click', function () { state.dataPage = (state.dataPage || 0) + 1; renderData(); });
+  ['q', 'f-city', 'f-team', 'f-status'].forEach(function (id) {
+    $(id).addEventListener(id === 'q' ? 'input' : 'change', function () { state.listingsPage = 0; renderListings(); });
+  });
+  ['listings', 'regions'].forEach(function (view) {
+    var render = view === 'listings' ? renderListings : renderRegions;
+    function update() {
+      render();
+      var wrap = $('view-' + view).querySelector('.table-wrap');
+      if (wrap) wrap.scrollTop = 0;
+    }
+    $(view + '-page-size').addEventListener('change', function () {
+      var size = Number(this.value);
+      if ([20, 50, 100, 200].indexOf(size) < 0) return;
+      state[view + 'PageSize'] = size;
+      state[view + 'Page'] = 0;
+      update();
+    });
+    $(view + '-prev').addEventListener('click', function () { state[view + 'Page'] = Math.max(0, (state[view + 'Page'] || 0) - 1); update(); });
+    $(view + '-next').addEventListener('click', function () { state[view + 'Page'] = (state[view + 'Page'] || 0) + 1; update(); });
+  });
   $('tbl-listings').getElementsByTagName('thead')[0].addEventListener('click', function (e) {
     var k = e.target.getAttribute('data-sort'); if (!k) return;
     state.asc = state.sort === k ? !state.asc : true;
     state.sort = k;
+    state.listingsPage = 0;
     renderListings();
   });
 
   (function () {
     var sb = $('sort-by'), ths = $('tbl-listings').querySelectorAll('th[data-sort]');
     sb.innerHTML = [].map.call(ths, function (th) { return '<option value="' + th.getAttribute('data-sort') + '">' + th.textContent + '</option>'; }).join('');
-    sb.addEventListener('change', function () { state.sort = this.value; state.asc = true; renderListings(); });
-    $('sort-dir').addEventListener('click', function () { state.asc = !state.asc; renderListings(); });
+    sb.addEventListener('change', function () { state.sort = this.value; state.asc = true; state.listingsPage = 0; renderListings(); });
+    $('sort-dir').addEventListener('click', function () { state.asc = !state.asc; state.listingsPage = 0; renderListings(); });
   })();
   document.addEventListener('change', function (e) {
     if (e.target.id === 'r-sort-by') sortBy($('regions-wrap').getElementsByTagName('table')[0], +e.target.value, true);

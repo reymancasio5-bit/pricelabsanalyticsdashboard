@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<link rel="stylesheet" href="styles.css?v=20261005-skeleton">
-<link rel="stylesheet" href="glass.css?v=20261002-dashboard-polish" id="glass-css">
+<link rel="stylesheet" href="styles.css?v=20261005-regions-full-height">
+<link rel="stylesheet" href="glass.css?v=20261005-all-table-batches" id="glass-css">
 <script>try{if(localStorage.getItem('pd-theme')==='classic')document.getElementById('glass-css').disabled=true}catch(e){}</script>
 </head>
 <body>
@@ -164,7 +164,17 @@
         </div>
         <div class="sortbar"><label for="sort-by">Sort by</label><select id="sort-by"></select><button class="icon-btn sort-dir" id="sort-dir" aria-label="Reverse order"><i class="fa-solid fa-arrow-up-wide-short"></i></button></div>
         <div class="count" id="count"></div>
-        <div class="table-wrap">
+        <div class="data-pagination">
+          <label for="listings-page-size">Rows per batch
+            <select id="listings-page-size"><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="200">200</option></select>
+          </label>
+          <span class="count" id="listings-page-info" role="status" aria-live="polite"></span>
+          <div class="data-page-buttons">
+            <button class="back" id="listings-prev" type="button" aria-controls="tbl-listings">Previous</button>
+            <button class="back" id="listings-next" type="button" aria-controls="tbl-listings">Next</button>
+          </div>
+        </div>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Listings table">
           <table class="tbl" id="tbl-listings">
             <thead><tr>
               <th data-sort="rank">Rank</th>
@@ -181,13 +191,23 @@
             <tbody></tbody>
           </table>
         </div>
-        <button class="more" id="more">Show more</button>
+
       </article>
     </section>
 
     <section class="view" id="view-regions" hidden>
       <article class="panel">
         <p class="hint">Select a region for details</p>
+        <div class="data-pagination">
+          <label for="regions-page-size">Rows per batch
+            <select id="regions-page-size"><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="200">200</option></select>
+          </label>
+          <span class="count" id="regions-page-info" role="status" aria-live="polite"></span>
+          <div class="data-page-buttons">
+            <button class="back" id="regions-prev" type="button" aria-controls="regions-wrap">Previous</button>
+            <button class="back" id="regions-next" type="button" aria-controls="regions-wrap">Next</button>
+          </div>
+        </div>
         <div id="regions-wrap"></div>
       </article>
     </section>
@@ -195,6 +215,16 @@
     <section class="view" id="view-data" hidden>
       <article class="panel">
         <div class="chips" id="data-tabs"></div>
+        <div class="data-pagination" id="data-pagination" hidden>
+          <label for="data-page-size">Rows per batch
+            <select id="data-page-size"><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="200">200</option></select>
+          </label>
+          <span class="count" id="data-page-info" role="status" aria-live="polite"></span>
+          <div class="data-page-buttons">
+            <button class="back" id="data-prev" type="button" aria-controls="data-wrap">Previous</button>
+            <button class="back" id="data-next" type="button" aria-controls="data-wrap">Next</button>
+          </div>
+        </div>
         <div id="data-wrap"></div>
       </article>
     </section>
@@ -205,6 +235,6 @@
     </div>
   </main>
 </div>
-<script src="script.js?v=20261005-api-redirect-retry"></script>
+<script src="script.js?v=20261005-all-table-batches"></script>
 </body>
 </html>

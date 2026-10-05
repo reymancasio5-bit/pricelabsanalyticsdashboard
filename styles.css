@@ -180,6 +180,13 @@ a{color:inherit}
 .panel .stat{background:var(--bg);box-shadow:none}
 
 /* Filters, chips, tables */
+.data-pagination{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:16px 0}
+.data-pagination label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.data-pagination select{padding:9px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)}
+.data-pagination .count{flex:1;margin:0}
+.data-page-buttons{display:flex;gap:8px}
+.data-page-buttons .back{margin:0;min-height:40px}
+.data-page-buttons button:disabled{opacity:.4;cursor:default;transform:none;box-shadow:none}
 .chips{display:flex;flex-wrap:wrap;margin:-4px -4px 8px}
 .chip{display:flex;align-items:center;margin:4px;padding:8px 14px;border:1px solid var(--line);border-radius:22px;background:var(--card);font-weight:600;color:var(--muted)}
 .chip i{margin-right:8px}
@@ -195,6 +202,10 @@ a{color:inherit}
 .filters select{flex:0 1 170px}
 .count{font-size:12px;color:var(--muted);margin:6px 0 8px}
 .table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* Data batches scroll beneath a fixed, opaque header on every screen size. */
+:is(#data-wrap, #view-listings, #regions-wrap) .table-wrap{max-height:65vh;max-height:65dvh;overflow:auto;position:relative;isolation:isolate;scroll-padding-top:48px}
+:is(#tbl-data, #tbl-listings, #tbl-regions){border-collapse:separate;border-spacing:0}
+:is(#tbl-data, #tbl-listings, #tbl-regions) th{position:sticky;top:0;z-index:2;background:var(--table-header,var(--card));box-shadow:0 1px 0 var(--line)}
 .tbl{width:100%;border-collapse:collapse}
 #tbl-listings{min-width:1100px}
 #tbl-listings th:nth-child(1),#tbl-listings td:nth-child(1){width:64px}
@@ -329,3 +340,39 @@ a{color:inherit}
   .side{width:200px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Keep Data as a table on phones so its headers remain visible while scrolling. */
+/* Regions uses the remaining viewport instead of the shared 65vh table cap. */
+.main:has(#dashboard-content:not([hidden]) #view-regions:not([hidden])){
+  display:flex;flex-direction:column;height:100vh;height:100dvh;
+  padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));
+}
+.main:has(#view-regions:not([hidden]))>.top,
+.main:has(#view-regions:not([hidden]))>.notice,
+.main:has(#view-regions:not([hidden]))>.loading-status{flex-shrink:0}
+#dashboard-content:has(#view-regions:not([hidden])),
+#view-regions:not([hidden]),
+#view-regions>.panel,
+#regions-wrap{display:flex;flex-direction:column;flex:1 1 0;min-height:0}
+#view-regions>.panel{margin-bottom:0}
+#view-regions>.panel>.hint,
+#view-regions .data-pagination,
+#regions-wrap>.sortbar{flex-shrink:0}
+#regions-wrap .table-wrap{flex:1 1 0;min-height:120px;max-height:none}
+
+/* Preserve table headers on small screens. */
+@media(max-width:640px){
+  :is(#tbl-data, #tbl-listings, #tbl-regions){display:table;width:100%}
+  :is(#tbl-data, #tbl-listings, #tbl-regions) thead{display:table-header-group}
+  :is(#tbl-data, #tbl-listings, #tbl-regions) tbody{display:table-row-group;width:auto}
+  :is(#tbl-data, #tbl-listings, #tbl-regions) tr{display:table-row;width:auto;border:0;border-radius:0;padding:0;margin:0}
+  :is(#tbl-data, #tbl-listings, #tbl-regions) td{display:table-cell;width:auto;padding:11px 10px;text-align:left;border-bottom:1px solid var(--line);min-width:120px}
+  :is(#tbl-data, #tbl-listings, #tbl-regions) td.num{text-align:right}
+  :is(#tbl-data, #tbl-listings, #tbl-regions) td::before{display:none}
+}
+
+@media(max-width:640px){
+  #tbl-listings{min-width:1100px}
+  #tbl-listings td:nth-child(n){display:table-cell;width:auto;padding:11px 10px;white-space:normal}
+  #tbl-listings td.name{margin:0;border-bottom:1px solid var(--line)}
+}

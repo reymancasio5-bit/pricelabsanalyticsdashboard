@@ -1,6 +1,7 @@
 /* Portfolio Desk - Glassmorphism (restyles the base layout in styles.css) */
 
 :root{
+  --table-header:#142e21;
   --bg:#091710;--card:rgba(17,38,28,.76);--ink:#f1f6f2;--muted:#a6b7ad;--line:rgba(220,239,227,.13);
   --leaf:rgba(220,239,227,.08);--green-d:#a9e6bf;--green:#54bd80;--lime:#d3c38e;
   --ok:#6ee7a0;--amber:#fbbf4d;--red:#ff8a7a;
