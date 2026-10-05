@@ -34,6 +34,19 @@ function harness(saved) {
   assert.equal(h.context.requests, 1);
   assert.equal(h.elements['dashboard-skeleton'].hidden, false);
   assert.equal(h.elements['dashboard-content'].hidden, true);
+  for (const view of ['listings', 'regions', 'data', 'overview']) {
+    h.context.state.loadingView = view;
+    h.context.renderLoadingView();
+    for (const name of ['overview', 'listings', 'regions', 'data']) {
+      assert.equal(h.elements[name + '-skeleton'].hidden, name !== view, 'Only the current page skeleton is visible');
+    }
+    assert.match(h.elements['loading-status'].textContent, new RegExp(view === 'overview' ? 'dashboard' : view));
+    assert.equal(h.elements['dashboard-content'].hidden, true);
+    assert.equal(h.context.requests, 1, 'Navigation during loading reuses the pending request');
+  }
+  assert.match(h.elements['listings-skeleton'].innerHTML, /skeleton-filters/);
+  assert.doesNotMatch(h.elements['regions-skeleton'].innerHTML, /skeleton-tabs/);
+  assert.match(h.elements['data-skeleton'].innerHTML, /skeleton-tabs/);
   await h.complete(data);
   assert.equal(h.elements['dashboard-skeleton'].hidden, true);
   assert.equal(h.elements['dashboard-content'].hidden, false);

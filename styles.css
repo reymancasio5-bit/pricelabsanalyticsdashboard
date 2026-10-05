@@ -62,6 +62,23 @@ a{color:inherit}
 .skeleton-row:last-child{margin-bottom:0}
 .skeleton-bar{height:14px;margin-top:12px;width:100%;border-radius:8px}
 .skeleton-item{height:38px;margin-top:14px;width:100%}
+.skeleton-controls{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.skeleton-control{width:120px;height:38px}
+.skeleton-tabs .skeleton-control{border-radius:24px}
+.skeleton-filters .skeleton-control{flex:1 1 120px}
+.skeleton-filters .skeleton-control:first-child{flex-grow:3}
+.skeleton-count{margin-bottom:18px}
+.skeleton-pagination{align-items:center}
+.skeleton-page-buttons{display:flex;gap:8px;margin-left:auto}
+.skeleton-page-buttons .skeleton-control{width:80px}
+.skeleton-table-scroll{overflow:hidden;border:1px solid var(--line);border-radius:10px}
+.skeleton-table{min-width:960px}
+.skeleton-table-row{display:grid;grid-template-columns:repeat(var(--skeleton-columns),minmax(0,1fr));gap:24px;padding:18px 14px;border-bottom:1px solid var(--line)}
+.skeleton-table-row:last-child{border-bottom:0}
+.skeleton-table-head{background:var(--bg)}
+.skeleton-cell{height:14px;width:85%}
+.skeleton-table-row:nth-child(odd) .skeleton-cell{width:65%}
+@media(max-width:640px){.skeleton-pagination>.skeleton-control{width:90px}.skeleton-tabs{gap:8px}.skeleton-tabs .skeleton-control{width:100px}.skeleton-page-buttons{margin-left:0}}
 @keyframes skeleton-shimmer{to{transform:translateX(100%)}}
 @media(prefers-reduced-motion:reduce){.skeleton::after{animation:none}.icon-btn.spin i{animation:none}}
 

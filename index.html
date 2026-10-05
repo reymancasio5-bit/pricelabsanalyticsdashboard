@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<link rel="stylesheet" href="styles.css?v=20261005-regions-full-height">
+<link rel="stylesheet" href="styles.css?v=20261005-page-skeletons">
 <link rel="stylesheet" href="glass.css?v=20261005-all-table-batches" id="glass-css">
 <script>try{if(localStorage.getItem('pd-theme')==='classic')document.getElementById('glass-css').disabled=true}catch(e){}</script>
 </head>
@@ -48,6 +48,7 @@
 
     <div id="loading-status" class="loading-status" role="status">Loading dashboard data…</div>
     <div id="dashboard-skeleton" aria-hidden="true">
+      <div id="overview-skeleton">
       <div class="cards">
         <div class="card hero skeleton-card"><span class="skeleton skeleton-label"></span><span class="skeleton skeleton-value"></span><span class="skeleton skeleton-caption"></span></div>
         <div class="card skeleton-card"><span class="skeleton skeleton-label"></span><span class="skeleton skeleton-value"></span><span class="skeleton skeleton-caption"></span></div>
@@ -70,6 +71,11 @@
         <div class="panel skeleton-panel"><span class="skeleton skeleton-heading"></span><span class="skeleton skeleton-item"></span><span class="skeleton skeleton-item"></span><span class="skeleton skeleton-item"></span></div>
         <div class="panel skeleton-panel"><span class="skeleton skeleton-heading"></span><span class="skeleton skeleton-item"></span><span class="skeleton skeleton-item"></span><span class="skeleton skeleton-item"></span></div>
       </div>
+    </div>
+
+      <div id="listings-skeleton" hidden></div>
+      <div id="regions-skeleton" hidden></div>
+      <div id="data-skeleton" hidden></div>
     </div>
 
     <div id="dashboard-content" aria-busy="true" hidden>
@@ -235,6 +241,6 @@
     </div>
   </main>
 </div>
-<script src="script.js?v=20261005-all-table-batches"></script>
+<script src="script.js?v=20261005-page-skeletons"></script>
 </body>
 </html>

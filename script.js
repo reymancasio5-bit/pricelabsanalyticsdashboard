@@ -169,10 +169,39 @@
     }
   }
 
+  function renderLoadingView() {
+    var view = state.loadingView || 'overview';
+    ['overview', 'listings', 'regions', 'data'].forEach(function (name) {
+      var skeleton = $(name + '-skeleton');
+      skeleton.hidden = name !== view;
+      if (name === 'overview' || name !== view || skeleton.innerHTML) return;
+      var block = '<span class="skeleton skeleton-control"></span>';
+      var html = '<div class="panel skeleton-table-panel">';
+      if (name !== 'regions') html += '<div class="skeleton-controls skeleton-tabs">' + block.repeat(name === 'listings' ? 3 : 5) + '</div>';
+      else html += '<span class="skeleton skeleton-heading"></span>';
+      if (name === 'listings') {
+        html += '<div class="skeleton-controls skeleton-filters">' + block.repeat(4) + '</div>' +
+          '<span class="skeleton skeleton-caption skeleton-count"></span>';
+      }
+      html += '<div class="skeleton-controls skeleton-pagination">' + block.repeat(2) +
+        '<div class="skeleton-page-buttons">' + block.repeat(2) + '</div></div>';
+      var columns = name === 'listings' ? 10 : 8;
+      html += '<div class="skeleton-table-scroll"><div class="skeleton-table" style="--skeleton-columns:' + columns + '">';
+      for (var row = 0; row < 9; row++) {
+        html += '<div class="skeleton-table-row' + (row === 0 ? ' skeleton-table-head' : '') + '">';
+        for (var col = 0; col < columns; col++) html += '<span class="skeleton skeleton-cell"></span>';
+        html += '</div>';
+      }
+      skeleton.innerHTML = html + '</div></div></div>';
+    });
+    $('loading-status').textContent = state.loaded ? 'Showing last loaded data. Checking for updates…' :
+      'Loading ' + (view === 'overview' ? 'dashboard' : view) + ' data…';
+  }
+
   function setLoading(loading) {
     state.loading = loading;
     $('dashboard-skeleton').hidden = !loading || state.loaded;
-    $('loading-status').textContent = state.loaded ? 'Showing last loaded data. Checking for updates…' : 'Loading dashboard data…';
+    renderLoadingView();
     $('loading-status').hidden = !loading;
     $('dashboard-content').hidden = !state.loaded;
     $('dashboard-content').setAttribute('aria-busy', String(loading));
@@ -860,6 +889,8 @@
     $('rdate').textContent = sub || '';
   }
   function show(view, navView) {
+    state.loadingView = navView;
+    renderLoadingView();
     ['overview', 'listings', 'regions', 'data', 'detail'].forEach(function (v) { $('view-' + v).hidden = v !== view; });
     var btns = document.querySelectorAll('.nav-btn');
     for (var i = 0; i < btns.length; i++) btns[i].className = 'nav-btn' + (btns[i].getAttribute('data-view') === navView ? ' active' : '');
