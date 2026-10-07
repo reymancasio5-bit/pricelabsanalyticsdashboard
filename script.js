@@ -66,7 +66,7 @@
   function sev(s) { s = String(s).toLowerCase(); return s === 'red' ? 0 : s === 'yellow' ? 1 : s === 'green' ? 2 : 3; }
 
   /* Status indicators: icon only, the word stays in the tooltip and for screen readers */
-  var ICO = { g: 'fa-circle-check', y: 'fa-triangle-exclamation', r: 'fa-circle-xmark', n: 'fa-circle-minus' };
+  var ICO = { g: 'fa-circle-check', y: 'fa-triangle-exclamation', r: 'fa-circle-exclamation', n: 'fa-circle-minus' };
   function ind(text) {
     var t = String(text || 'None'), c = statusClass(t), i = ICO[c];
     if (/improv/i.test(t)) i = 'fa-arrow-trend-up';

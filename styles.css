@@ -333,7 +333,6 @@ a{color:inherit}
 /* Phone */
 @media (max-width:640px){
   #risks .desktop-risk-arrow{display:block;flex:0 0 auto;margin-left:14px}
-  #tbl-listings{min-width:0}
   .card{flex-basis:calc(50% - 12px)}
   .big{font-size:24px}
   .stat{flex-basis:calc(50% - 12px)}
@@ -347,13 +346,6 @@ a{color:inherit}
   .tbl td.name{display:block;text-align:left;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:4px}
   .tbl td.name:before{display:none}
   .tbl td.empty{display:block;text-align:center}
-  /* Override desktop column widths and align every listing value. */
-  #tbl-listings td:nth-child(n){width:100%}
-  #tbl-listings td{display:grid;grid-template-columns:108px minmax(0,1fr);column-gap:12px;row-gap:3px;padding:8px 0;text-align:left;white-space:normal;justify-items:start;overflow-wrap:anywhere}
-  #tbl-listings td:before{grid-column:1;grid-row:1;margin:0}
-  #tbl-listings td.occ .mk{grid-column:2;text-align:left}
-  #tbl-listings td.name{display:block;padding-bottom:10px;margin-bottom:6px}
-  #tbl-listings td.empty{display:block;text-align:center}
   .lead-link .more{gap:8px}
   .lead-link .more>i{flex-shrink:0}
 }
@@ -407,15 +399,11 @@ a{color:inherit}
   :is(#tbl-data, #tbl-listings, #tbl-regions) td::before{display:none}
 }
 
-@media(max-width:640px){
-  #tbl-listings{min-width:1100px}
-  #tbl-listings td:nth-child(n){display:table-cell;width:auto;padding:11px 10px;white-space:normal}
-  #tbl-listings td.name{margin:0;border-bottom:1px solid var(--line)}
-}
-
 /* Keep comparison columns comfortably spaced at every viewport width. */
+:is(#tbl-listings,#tbl-regions){font-size:14px}
 :is(#tbl-listings,#tbl-regions) th,
 :is(#tbl-listings,#tbl-regions) td:nth-child(n){padding:14px 16px}
+:is(#tbl-listings,#tbl-regions) td{min-width:0}
 #tbl-listings{min-width:1240px}
 #tbl-regions{min-width:1020px}
 :is(#tbl-listings,#tbl-regions) td.num{white-space:nowrap}
@@ -435,8 +423,6 @@ a{color:inherit}
   .filters>*{max-width:calc(100% - 8px)}
   .sortbar{flex-wrap:wrap;gap:8px}
   .sortbar select{min-width:0;margin-right:0}
-  :is(#tbl-listings,#tbl-regions) th,
-  :is(#tbl-listings,#tbl-regions) td:nth-child(n){padding:12px 16px}
 }
 @media(max-width:360px){
   :is(#view-listings,#view-regions)>.panel{padding:12px}
