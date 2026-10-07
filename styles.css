@@ -151,6 +151,8 @@ a{color:inherit}
 .ind.y{background:var(--amber-bg);color:var(--amber)}
 .ind.r{background:var(--red-bg);color:var(--red)}
 .ind.n,.tag{background:var(--bg);color:var(--muted)}
+.horizon-value{display:inline-flex;align-items:center;justify-content:flex-end;gap:12px;white-space:nowrap}
+.tbl .ind,.tbl .tag{width:30px;height:30px;flex:0 0 30px;font-size:13px}
 .tag.team{font-size:12px;font-weight:800;color:var(--green-d);background:var(--leaf)}
 .ind>i,.tag>i{display:block;margin:0;color:inherit;line-height:1;text-align:center}
 .stat b .ind,.stat b .tag{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;margin:2px 0;border-radius:12px;font-size:18px;line-height:1}
@@ -264,6 +266,7 @@ a{color:inherit}
 .tbl th[aria-sort="ascending"]:after{content:"\f0de";opacity:1}
 .tbl th[aria-sort="descending"]:after{content:"\f0dd";opacity:1}
 .occ .mk{display:block;font-size:11px;color:var(--muted);font-weight:500}
+.occ .horizon-value+.mk{margin-top:6px;text-align:right;white-space:nowrap}
 .sortbar{display:none;align-items:center;margin:0 0 10px}
 .sortbar label{font-size:12px;font-weight:600;color:var(--muted);margin-right:8px}
 .sortbar select{flex:1 1 auto;margin-right:8px}
@@ -408,4 +411,44 @@ a{color:inherit}
   #tbl-listings{min-width:1100px}
   #tbl-listings td:nth-child(n){display:table-cell;width:auto;padding:11px 10px;white-space:normal}
   #tbl-listings td.name{margin:0;border-bottom:1px solid var(--line)}
+}
+
+/* Keep comparison columns comfortably spaced at every viewport width. */
+:is(#tbl-listings,#tbl-regions) th,
+:is(#tbl-listings,#tbl-regions) td:nth-child(n){padding:14px 16px}
+#tbl-listings{min-width:1240px}
+#tbl-regions{min-width:1020px}
+:is(#tbl-listings,#tbl-regions) td.num{white-space:nowrap}
+#tbl-listings td.name{min-width:220px;overflow-wrap:anywhere}
+#tbl-regions td.name{min-width:180px;overflow-wrap:anywhere}
+#tbl-listings td.occ{min-width:166px}
+.data-pagination{gap:12px 16px;margin:16px 0 20px}
+.data-pagination .count{flex:1 1 200px;line-height:1.6}
+.data-page-buttons{flex-wrap:wrap}
+.data-pagination select,.data-page-buttons button{min-height:44px}
+
+@media(max-width:640px){
+  :is(#view-listings,#view-regions)>.panel{padding:14px}
+  .data-pagination label{flex-wrap:wrap}
+  .data-pagination .count{flex-basis:100%}
+  .data-page-buttons{gap:12px}
+  .filters>*{max-width:calc(100% - 8px)}
+  .sortbar{flex-wrap:wrap;gap:8px}
+  .sortbar select{min-width:0;margin-right:0}
+  :is(#tbl-listings,#tbl-regions) th,
+  :is(#tbl-listings,#tbl-regions) td:nth-child(n){padding:12px 16px}
+}
+@media(max-width:360px){
+  :is(#view-listings,#view-regions)>.panel{padding:12px}
+  .data-pagination{gap:12px;margin:12px 0 16px}
+  .data-page-buttons{width:100%;gap:8px}
+  .data-page-buttons button{flex:1 1 72px;justify-content:center;padding:8px 10px}
+  .sortbar label{flex-basis:100%;margin-right:0}
+  .top{flex-wrap:wrap;row-gap:10px}
+  .ttl p{overflow-wrap:anywhere}
+}
+/* Let short cover screens scroll the page as well as the table. */
+@media(max-height:600px){
+  .main:has(#dashboard-content:not([hidden]) #view-regions:not([hidden])){height:auto;min-height:100vh;min-height:100dvh}
+  #regions-wrap .table-wrap{flex:0 1 auto;min-height:160px;max-height:65vh;max-height:65dvh}
 }

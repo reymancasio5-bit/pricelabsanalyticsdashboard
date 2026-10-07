@@ -75,6 +75,14 @@
     return '<span class="ind ' + c + '" title="' + esc(t) + '" role="img" aria-label="' + esc(t) + '"><i class="fa-solid ' + i + '" aria-hidden="true"></i></span>';
   }
   var pill = ind;
+  function horizonValue(value, benchmark, horizon, status) {
+    var c = statusClass(status == null ? rate(value, benchmark) : status);
+    var labels = { g: 'On track', y: 'Watch', r: 'Needs attention', n: 'Status unavailable' };
+    var icons = { g: 'fa-arrow-trend-up', y: 'fa-triangle-exclamation', r: 'fa-circle-exclamation', n: 'fa-equals' };
+    var label = horizon + ' status: ' + labels[c];
+    return '<span class="horizon-value"><span>' + pct(value) + '</span><span class="ind ' + c + '" title="' + esc(label) +
+      '" role="img" aria-label="' + esc(label) + '"><i class="fa-solid ' + icons[c] + '" aria-hidden="true"></i></span></span>';
+  }
   function tag(icon, label) { return '<span class="tag" title="' + esc(label) + '" role="img" aria-label="' + esc(label) + '"><i class="fa-solid ' + icon + '" aria-hidden="true"></i></span>'; }
   var TYPE = { entire: 'Entire Unit', room: 'By Room' };
   function typeTag(t) { return t ? tag(t === 'room' ? 'fa-door-open' : 'fa-house', TYPE[t]) : tag('fa-ellipsis', 'Other'); }
@@ -313,9 +321,9 @@
     var body = list.map(function (r) {
       return '<tr class="clk"' + go('#/region/' + enc(r.region)) + '><td class="name"><b>' + esc(r.region) + '</b></td>' +
         '<td class="num" data-l="Listings">' + r.act + '</td><td class="num" data-l="Past 30D">' + pct(r.past) + '</td>' +
-        '<td class="num" data-l="Next 15D">' + pct(r.n14) + '</td>' +
+        '<td class="num" data-l="Next 15D">' + horizonValue(r.n14, r.b14, '15D', r.act ? r.s14 : '') + '</td>' +
         '<td class="num" data-l="Next 15D Benchmark">' + pct(r.b14) + '</td>' +
-        '<td class="num" data-l="Next 30D">' + pct(r.next) + '</td>' +
+        '<td class="num" data-l="Next 30D">' + horizonValue(r.next, r.b30, '30D', r.act ? r.s30 : '') + '</td>' +
         '<td class="num" data-l="Next 30D Benchmark">' + pct(r.b30) + '</td>' +
         '<td class="indicator-cell" data-l="Indicator" data-sv="' + sev(regionIndicator(r)) + '">' + ind(regionIndicator(r)) + '</td></tr>';
     }).join('');
@@ -483,9 +491,9 @@
     });
     return rows;
   }
-  function occCell(v, m) {
+  function occCell(v, m, horizon) {
     var c = v != null && m != null ? (v >= m ? 'up' : 'down') : '';
-    return '<span class="' + c + '">' + pct(v) + '</span>' + (m != null ? '<span class="mk">Benchmark ' + pct(m) + '</span>' : '');
+    return (horizon ? horizonValue(v, m, horizon) : '<span class="' + c + '">' + pct(v) + '</span>') + (m != null ? '<span class="mk">Benchmark ' + pct(m) + '</span>' : '');
   }
   function renderListings() {
     var rows = filtered(), part = batchRows('listings', rows);
@@ -495,8 +503,8 @@
       var cells = {
         rank: ['', l.rank == null ? 'n/a' : l.rank], name: ['name', '<b>' + esc(l.name) + '</b>'],
         city: ['', esc(l.city)], group: ['', teamTag(l.group)], type: ['', typeTag(l.type)],
-        occ15: ['num occ', occCell(l.occ15, l.mk15)], occ: ['num occ', occCell(l.occ, l.mk)],
-        occN: ['num occ', occCell(l.occN, l.mkN)],
+        occ15: ['num occ', occCell(l.occ15, l.mk15, '15D')], occ: ['num occ', occCell(l.occ, l.mk)],
+        occN: ['num occ', occCell(l.occN, l.mkN, '30D')],
         gapN: ['num ' + cls(l.gapN), l.gapN == null ? 'n/a' : sign(l.gapN) + pct(l.gapN)],
         status: ['', ind(l.status)]
       };
