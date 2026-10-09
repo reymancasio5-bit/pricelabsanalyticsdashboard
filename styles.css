@@ -53,6 +53,7 @@ a{color:inherit}
 .top .icon-btn{margin-left:8px}
 .ttl{flex:1 1 auto;min-width:0}
 .top h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.main:has(#view-data:not([hidden])) .top h1{white-space:normal;overflow-wrap:anywhere}
 .ttl p{margin:2px 0 0;font-size:12px;color:var(--muted)}
 .icon-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--card);flex:0 0 40px;display:inline-flex;align-items:center;justify-content:center;padding:0}
 .icon-btn:hover{background:var(--leaf)}
@@ -242,17 +243,12 @@ a{color:inherit}
 :is(#tbl-data, #tbl-listings, #tbl-regions){border-collapse:separate;border-spacing:0}
 :is(#tbl-data, #tbl-listings, #tbl-regions) th{position:sticky;top:0;z-index:2;background:var(--table-header,var(--card));box-shadow:0 1px 0 var(--line)}
 .tbl{width:100%;border-collapse:collapse}
-#tbl-listings{min-width:1100px}
-#tbl-listings th:nth-child(1),#tbl-listings td:nth-child(1){width:64px}
-#tbl-listings th:nth-child(2),#tbl-listings td:nth-child(2){width:240px}
-#tbl-listings th:nth-child(3),#tbl-listings td:nth-child(3){width:130px}
-#tbl-listings th:nth-child(4),#tbl-listings td:nth-child(4){width:125px}
-#tbl-listings th:nth-child(5),#tbl-listings td:nth-child(5){width:95px}
-#tbl-listings th:nth-child(6),#tbl-listings td:nth-child(6),
-#tbl-listings th:nth-child(7),#tbl-listings td:nth-child(7),
-#tbl-listings th:nth-child(8),#tbl-listings td:nth-child(8){width:140px}
-#tbl-listings th:nth-child(9),#tbl-listings td:nth-child(9){width:90px}
-#tbl-listings th:nth-child(10),#tbl-listings td:nth-child(10){width:100px}
+#tbl-listings th[data-sort="name"]{width:240px}
+#tbl-listings th[data-sort="city"]{width:130px}
+#tbl-listings th[data-sort="group"],#tbl-listings th[data-sort="type"],
+#tbl-listings th[data-sort="status"]{width:80px}
+#tbl-listings th.num{width:150px}
+#tbl-listings th[data-sort="mk15"],#tbl-listings th[data-sort="mkN"]{width:180px}
 .tbl th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;user-select:none;-webkit-user-select:none}
 .tbl td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
 .tbl .num{text-align:right;white-space:nowrap}

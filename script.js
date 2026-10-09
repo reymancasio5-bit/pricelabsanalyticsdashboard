@@ -11,7 +11,7 @@
   var TABICON = { 'Regional Performance': 'fa-map-location-dot', 'AM Action Inputs': 'fa-clipboard-list', 'Monthly Inputs': 'fa-calendar-check', 'Management Inputs': 'fa-sliders', 'Legend': 'fa-palette' };
 
   var state = { ov: null, listings: [], wl: [], setup: {}, monthly: [], actions: [], details: {}, tabs: {}, tab: '',
-    type: 'all', listingsPage: 0, regionsPage: 0, sort: 'rank', asc: true, loaded: false, loading: false };
+    type: 'all', listingsPage: 0, regionsPage: 0, sort: 'name', asc: true, loaded: false, loading: false };
   var navCount = 0;
 
   /* ---------- Helpers ---------- */
@@ -66,11 +66,12 @@
   function sev(s) { s = String(s).toLowerCase(); return s === 'red' ? 0 : s === 'yellow' ? 1 : s === 'green' ? 2 : 3; }
 
   /* Status indicators: icon only, the word stays in the tooltip and for screen readers */
-  var ICO = { g: 'fa-circle-check', y: 'fa-triangle-exclamation', r: 'fa-circle-exclamation', n: 'fa-circle-minus' };
+  var ICO = { g: 'fa-circle-check', y: 'fa-triangle-exclamation', r: 'fa-circle-exclamation', n: 'fa-circle-minus', stable: 'fa-arrows-left-right' };
+  function isStable(status) { return /^stable$/i.test(String(status || '').trim()); }
   function ind(text) {
     var t = String(text || 'None'), c = statusClass(t), i = ICO[c];
     if (/improv/i.test(t)) i = 'fa-arrow-trend-up';
-    else if (/stable/i.test(t)) i = 'fa-equals';
+    else if (isStable(t)) i = ICO.stable;
     else if (/need|attention/i.test(t)) i = 'fa-circle-exclamation';
     return '<span class="ind ' + c + '" title="' + esc(t) + '" role="img" aria-label="' + esc(t) + '"><i class="fa-solid ' + i + '" aria-hidden="true"></i></span>';
   }
@@ -78,10 +79,11 @@
   function horizonValue(value, benchmark, horizon, status) {
     var c = statusClass(status == null ? rate(value, benchmark) : status);
     var labels = { g: 'On track', y: 'Watch', r: 'Needs attention', n: 'Status unavailable' };
-    var icons = { g: 'fa-arrow-trend-up', y: 'fa-triangle-exclamation', r: 'fa-circle-exclamation', n: 'fa-equals' };
-    var label = horizon + ' status: ' + labels[c];
+    var icons = { g: 'fa-arrow-trend-up', y: 'fa-triangle-exclamation', r: 'fa-circle-exclamation', n: ICO.n };
+    var stable = isStable(status), icon = stable ? ICO.stable : icons[c];
+    var label = horizon + ' status: ' + (stable ? 'Stable' : labels[c]);
     return '<span class="horizon-value"><span>' + pct(value) + '</span><span class="ind ' + c + '" title="' + esc(label) +
-      '" role="img" aria-label="' + esc(label) + '"><i class="fa-solid ' + icons[c] + '" aria-hidden="true"></i></span></span>';
+      '" role="img" aria-label="' + esc(label) + '"><i class="fa-solid ' + icon + '" aria-hidden="true"></i></span></span>';
   }
   function tag(icon, label) { return '<span class="tag" title="' + esc(label) + '" role="img" aria-label="' + esc(label) + '"><i class="fa-solid ' + icon + '" aria-hidden="true"></i></span>'; }
   var TYPE = { entire: 'Entire Unit', room: 'By Room' };
@@ -115,7 +117,12 @@
       };
       o.gapN = o.occN != null && o.mkN != null ? o.occN - o.mkN : null;
       return o;
-    }).filter(function (l) { return String(l.name || '').trim(); });
+    }).filter(function (l) {
+      // Exclude unmatched source rows and listings with no occupancy data.
+      // Zero occupancy is valid; benchmarks alone do not make a listing usable.
+      return String(l.name || '').trim() && !/^source match review$/i.test(String(l.status).trim()) &&
+        (l.occ != null || l.occ15 != null || l.occN != null);
+    });
     state.wl = (data.worklist || []).map(function (r) {
       return { region: r[1], act: nz(r[2]), past: pn(r[3]), n14: pn(r[4]), next: pn(r[5]), c14: pn(r[6]), c30: pn(r[7]),
         b14: pn(r[8]), b30: pn(r[9]), s14: r[10], s30: r[11] };
@@ -382,7 +389,10 @@
     }).join('') : '<li class="empty">No risk data found.</li>';
 
     var k = ov.kpis || {};
-    var gr = nz(k['Green Regions']), ye = nz(k['Yellow Regions']), re = nz(k['Red Regions']), tot = (gr + ye + re) || 1;
+    // Use the same Weekly AM Worklist 30D statuses as the linked detail pages.
+    // Executive Overview KPI labels can change (for example, adding "(30D)").
+    var regionCounts = counts(state.wl, 's30');
+    var gr = regionCounts.g, ye = regionCounts.y, re = regionCounts.r, tot = (gr + ye + re) || 1;
     $('status-split').innerHTML = [['g', 'Green', gr], ['y', 'Yellow', ye], ['r', 'Red', re]].map(function (x) {
       return '<a class="split-row row-link" href="#/status/' + x[0] + '">' + ind(x[1]) + '<div class="track"><div class="fill ' + x[0] +
         '" style="width:0" data-w="' + (x[2] / tot * 100) + '"></div></div><div class="split-count">' + x[2] + '</div>' + chev(1) + '</a>';
@@ -416,7 +426,10 @@
   }
   function renderInsights() {
     var L = state.listings;
-    if (!L.length) { $('pulse').innerHTML = ''; return; }
+    if (!L.length) {
+      ['pulse', 'mix', 'teams', 'cities', 'movers', 'acts'].forEach(function (id) { $(id).innerHTML = ''; });
+      return;
+    }
     var occN = avg(pluck(L, 'occN')), mkN = avg(pluck(L, 'mkN')), rev = avg(pluck(L, 'revN'));
     var revP = avg(pluck(L.filter(function (l) { return !l.blocked; }), 'rev'));
     var chg = revP ? (rev / revP - 1) * 100 : null, gap = occN != null && mkN != null ? occN - mkN : null;
@@ -501,11 +514,11 @@
     $('count').textContent = rows.length.toLocaleString('en-US') + ' listings. Select a listing for details.';
     $('tbl-listings').getElementsByTagName('tbody')[0].innerHTML = part.map(function (l) {
       var cells = {
-        rank: ['', l.rank == null ? 'n/a' : l.rank], name: ['name', '<b>' + esc(l.name) + '</b>'],
+        name: ['name', '<b>' + esc(l.name) + '</b>'],
         city: ['', esc(l.city)], group: ['', teamTag(l.group)], type: ['', typeTag(l.type)],
-        occ15: ['num occ', occCell(l.occ15, l.mk15, '15D')], occ: ['num occ', occCell(l.occ, l.mk)],
-        occN: ['num occ', occCell(l.occN, l.mkN, '30D')],
-        gapN: ['num ' + cls(l.gapN), l.gapN == null ? 'n/a' : sign(l.gapN) + pct(l.gapN)],
+        occ: ['num', pct(l.occ)], occ15: ['num occ', horizonValue(l.occ15, l.mk15, '15D')],
+        mk15: ['num', pct(l.mk15)], occN: ['num occ', horizonValue(l.occN, l.mkN, '30D')],
+        mkN: ['num', pct(l.mkN)],
         status: ['', ind(l.status)]
       };
       return '<tr class="clk"' + go('#/listing/' + enc(l.id)) + '>' + Array.prototype.map.call(headers, function (header) {
@@ -573,6 +586,9 @@
   }
 
   /* Extra tabs (Regional Performance, AM Action Inputs, Monthly Inputs, Legend) */
+  function dataTitle() {
+    return state.tab === 'Legend' ? 'Dashboard Legend And Guide' : 'Data';
+  }
   function renderData() {
     state.dataDirty = false;
     var names = Object.keys(state.tabs);
@@ -583,11 +599,22 @@
       return '<button class="chip' + (n === state.tab ? ' active' : '') + '" data-tab="' + esc(n) + '"><i class="fa-solid ' + (TABICON[n] || 'fa-table') + '"></i>' + esc(n) + '</button>';
     }).join('');
     var t = state.tabs[state.tab];
+    if (state.tab === 'Legend') {
+      var legendHeaders = ['Item', 'Description', 'Context', 'Guidance'];
+      var firstRow = t.rows[0] || [];
+      var hasHeaderRow = legendHeaders.every(function (h, i) {
+        return String(firstRow[i] || '').trim().toLowerCase() === h.toLowerCase();
+      });
+      // The workbook's title row is metadata; its next row labels the columns.
+      // Copy the presentation so cached API data stays unchanged across renders.
+      t = { headers: legendHeaders, rows: hasHeaderRow ? t.rows.slice(1) : t.rows };
+    }
+    if (state.loadingView === 'data') setTitle(dataTitle());
     var size = state.dataPageSize || 20, rows = t.rows.slice(), sort = state.dataSort;
     if (sort && sort.ci < t.headers.length) {
       rows = rows.map(function (r, i) {
         var value = String(r[sort.ci] == null ? '' : r[sort.ci]);
-        return { r: r, n: i, v: sortValue(/^(green|yellow|red)$/i.test(value) ? String(sev(value)) : value) };
+        return { r: r, n: i, v: sortValue(/^(green|yellow|red)$/i.test(value) || isStable(value) ? String(sev(value)) : value) };
       }).sort(function (a, b) { return compareCells(a, b, sort.asc); }).map(function (item) { return item.r; });
     }
     var pages = Math.max(1, Math.ceil(rows.length / size));
@@ -601,7 +628,7 @@
       t.headers.map(function (h, i) { return '<th' + (sort && sort.ci === i ? ' aria-sort="' + (sort.asc ? 'ascending' : 'descending') + '"' : '') + '>' + heading(esc(h)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       rows.slice(start, end).map(function (r) {
         return '<tr>' + r.map(function (c, i) {
-          var s = String(c), st = /^(green|yellow|red)$/i.test(s), num = /^[+\-]?\$?[\d,.]+%?$/.test(s);
+          var s = String(c), st = /^(green|yellow|red)$/i.test(s) || isStable(s), num = /^[+\-]?\$?[\d,.]+%?$/.test(s);
           return '<td class="' + (num ? 'num' : '') + '" data-l="' + heading(esc(t.headers[i])) + '"' + (st ? ' data-sv="' + sev(s) + '"' : '') + '>' + (st ? ind(s) : esc(s)) + '</td>';
         }).join('') + '</tr>';
       }).join('') + '</tbody></table></div>';
@@ -911,7 +938,7 @@
       if (kind === 'data' && state.loaded && state.dataDirty) renderData();
       if (kind === 'listings' && arg && state.loaded) applyFilter(arg);
       show(kind, kind);
-      setTitle(TITLES[kind], kind === 'overview' && state.ov && state.ov.reportDate ? 'Reporting date: ' + state.ov.reportDate : '');
+      setTitle(kind === 'data' ? dataTitle() : TITLES[kind], kind === 'overview' && state.ov && state.ov.reportDate ? 'Reporting date: ' + state.ov.reportDate : '');
     } else {
       var nav = kind === 'listing' ? 'listings' : kind === 'region' ? 'regions' : 'overview';
       show('detail', nav);

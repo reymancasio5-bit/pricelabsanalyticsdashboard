@@ -48,13 +48,13 @@ console.log('PASS: default 20 rows, all batch sizes, final batch, full-dataset s
 function header(key) {
   return { textContent: key, className: '', getAttribute: () => key, setAttribute() {}, removeAttribute() {} };
 }
-const tbody = { innerHTML: '' }, headers = [header('rank'), header('name')];
+const tbody = { innerHTML: '' }, headers = [header('name')];
 elements['tbl-listings'] = { querySelectorAll: () => headers, getElementsByTagName: () => [tbody] };
 for (const id of ['q', 'f-city', 'f-team', 'f-status']) context.document.getElementById(id).value = '';
 state.listings = Array.from({ length: 205 }, (_, i) => ({ id: i, rank: 205 - i, name: 'Listing ' + (205 - i), city: i < 3 ? 'Small' : 'Large' }));
 context.api.renderListings();
 assert.equal((tbody.innerHTML.match(/<tr /g) || []).length, 20);
-assert.match(tbody.innerHTML, /<td class="" data-l="rank">1<\/td>/);
+assert.match(tbody.innerHTML, /<td class="name" data-l="name"><b>Listing 1<\/b><\/td>/);
 for (const size of [20, 50, 100, 200]) {
   state.listingsPageSize = size; state.listingsPage = 0; context.api.renderListings();
   assert.equal((tbody.innerHTML.match(/<tr /g) || []).length, size);

@@ -4,8 +4,8 @@ const vm = require('node:vm');
 
 const grids = {
   'Pricelabs Report': [
-    ['Listing Name', 'Total Occupancy ( Next 15 Days )', 'Total Occupancy ( Next 15 Days )', 'Total Occupancy ( Past 30 Days )', 'Total Occupancy ( Next 30 Days )', 'Next 30D Benchmark %', 'Status'],
-    ['Sample', '███', '75%', '50%', '60%', '70%', 'Yellow']
+    ['Listing Name', 'Total Occupancy ( Next 15 Days )', 'Total Occupancy ( Next 15 Days )', 'Total Occupancy ( Past 30 Days )', 'Total Occupancy ( Next 30 Days )', 'Next 30D Benchmark %', 'Status', 'Next 15D Benchmark %'],
+    ['Sample', '███', '75%', '50%', '60%', '35%', 'Yellow', '52.5%']
   ],
   'Detailed Listings': [[], [], [], ['Listing ID', 'Listing Name', 'Base Price', 'Recommended Base Price'], ['one', 'Sample', '$100', '$110']],
   'Property Setup': [['Region', 'Active Listings'], ['North', '1'], ['Reporting Month', 'Oct 2026']],
@@ -23,7 +23,7 @@ const cache = {
 };
 const ss = { getSheetByName(name) { return { getDataRange() { return {
   getDisplayValues() { displayReads++; return structuredClone(grids[name]); },
-  getValues() { rawReads++; return grids[name].map(r => r.map(v => /^\d+%$/.test(v) ? parseFloat(v) / 100 : v)); }
+  getValues() { rawReads++; return grids[name].map(r => r.map(v => /^\d+(?:\.\d+)?%$/.test(v) ? parseFloat(v) / 100 : v)); }
 }; } }; } };
 const context = {
   CacheService: { getScriptCache: () => cache },
@@ -42,6 +42,8 @@ const first = request();
 assert.equal(first.ok, true);
 assert.equal(first.listings[0].occ15, '75%'); // Skip duplicate visual-bar column.
 assert.equal(first.listings[0].occ, '50%'); // Preserve fractional raw-value conversion.
+assert.equal(first.listings[0].benchmark15, '52.5%');
+assert.equal(first.listings[0].benchmark30, '35%');
 assert.equal(first.reportingMonth, 'Oct 2026');
 assert.equal(displayReads, 12);
 assert.equal(rawReads, 1);
