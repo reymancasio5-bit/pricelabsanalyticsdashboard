@@ -3,17 +3,17 @@
 :root{
   --table-header:#142e21;
   --bg:#091710;--card:rgba(17,38,28,.76);--ink:#f1f6f2;--muted:#a6b7ad;--line:rgba(220,239,227,.13);
-  --leaf:rgba(220,239,227,.08);--green-d:#a9e6bf;--green:#54bd80;--lime:#d3c38e;
+  --leaf:rgba(220,239,227,.08);--green-d:#a9e6bf;--green:#54bd80;--lime:#72c9aa;
   --ok:#6ee7a0;--amber:#fbbf4d;--red:#ff8a7a;
   --ok-bg:rgba(110,231,160,.16);--amber-bg:rgba(251,191,77,.16);--red-bg:rgba(255,138,122,.16);
-  --shadow:0 14px 38px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.07);
+  --shadow:0 8px 28px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.04);
   --blur:blur(16px) saturate(135%);
   --scrollbar-track:#142e21;--scrollbar-thumb:#608d73;--scrollbar-hover:#81b794;--scrollbar-active:#a9e6bf;
 }
 body{
   background:#091710;
   background-image:radial-gradient(55vmax 55vmax at 8% -12%,rgba(52,122,83,.24),transparent 62%),
-    radial-gradient(48vmax 48vmax at 100% 4%,rgba(115,103,66,.15),transparent 64%),
+    radial-gradient(48vmax 48vmax at 100% 4%,rgba(36,112,89,.12),transparent 64%),
     radial-gradient(58vmax 58vmax at 52% 112%,rgba(24,85,90,.20),transparent 62%);
   background-attachment:scroll;
 }
@@ -27,12 +27,9 @@ body{
 .side{background:rgba(10,25,18,.84);border-radius:0 26px 26px 0;border-left:0}
 .card,.panel,.stat{background:linear-gradient(145deg,rgba(28,55,40,.78),rgba(15,34,25,.70));box-shadow:var(--shadow)}
 .panel .stat{background:rgba(235,247,239,.045);box-shadow:none}
-.card.hero{background:linear-gradient(135deg,rgba(115,110,69,.78),rgba(23,91,59,.86));color:#fff}
-.hero .badge{background:rgba(255,255,255,.92);color:#17422c}
-.hero .sub{color:#eff4de}
-.side-note{background:linear-gradient(150deg,rgba(62,120,82,.46),rgba(15,57,40,.58));border:1px solid var(--line)}
-.nav-btn.active{color:#10271a;background:linear-gradient(90deg,#ddcf9d,#72c994);box-shadow:0 8px 20px rgba(74,156,103,.22)}
-.nav-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+.card.hero,.side-note{background:linear-gradient(118deg,#123d30 0%,#1c6550 27%,#0a3528 48%,#327e60 67%,#164b3a 84%,#082d23 100%);border-color:#6b9b85;border-top-color:#b8d3be;border-bottom-color:#285d48;color:#fff;box-shadow:inset 0 1px 0 rgba(248,248,218,.65),inset 1px 0 0 rgba(224,241,220,.25),inset 0 -2px 0 rgba(0,18,12,.45),0 10px 28px rgba(0,0,0,.3)}
+.hero .sub{color:#d3eade}
+.nav-btn:not(.active):hover{background:rgba(255,255,255,.1);color:#fff}
 .brand i,.sub{color:var(--green-d)}
 .icon-btn,.chip,.more,.back{background:rgba(255,255,255,.1)}
 .icon-btn:hover,.more:hover,.back:hover{background:rgba(255,255,255,.2)}
@@ -47,16 +44,16 @@ select option{background:#0f2a20;color:#eef6f1}
 
 /* Bars */
 .bar-track,.split-row .track{background:rgba(255,255,255,.12)}
-.bar-fill{background:linear-gradient(90deg,var(--lime),var(--green));box-shadow:0 0 12px rgba(79,196,127,.3)}
-.bar-fill.low{background:repeating-linear-gradient(135deg,rgba(255,255,255,.22) 0 2px,transparent 2px 7px),linear-gradient(90deg,#f6c453,#e0902b);box-shadow:0 0 12px rgba(246,196,83,.4)}
+.bar-fill{background:linear-gradient(90deg,var(--lime),var(--green))}
+.bar-fill.low{background:linear-gradient(90deg,#f6c453,#e0902b)}
 .bar-mark,.sw-mark{background:#fff}
 .fill.n,.fill.mid{background:#7f918a}
 
-/* Status icons glow softly */
+/* Quiet status surfaces retain semantic colors. */
 .ind,.tag{box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
-.ind.g{box-shadow:inset 0 0 0 1px rgba(110,231,160,.35),0 0 14px rgba(110,231,160,.25)}
-.ind.y{box-shadow:inset 0 0 0 1px rgba(251,191,77,.35),0 0 14px rgba(251,191,77,.22)}
-.ind.r{box-shadow:inset 0 0 0 1px rgba(255,138,122,.4),0 0 14px rgba(255,138,122,.28)}
+.ind.g{box-shadow:inset 0 0 0 1px rgba(110,231,160,.35)}
+.ind.y{box-shadow:inset 0 0 0 1px rgba(251,191,77,.35)}
+.ind.r{box-shadow:inset 0 0 0 1px rgba(255,138,122,.4)}
 .ind.n,.tag{background:rgba(255,255,255,.1)}
 .tag.team{background:rgba(127,224,168,.16);color:var(--green-d)}
 .tagchip{background:rgba(127,224,168,.14);color:var(--green-d)}
@@ -75,7 +72,7 @@ select option{background:#0f2a20;color:#eef6f1}
 .badge{border-color:rgba(255,255,255,.25)}
 
 @media (hover:hover){
-  .card:hover{box-shadow:0 18px 44px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.12)}
+  .card.clk:hover{box-shadow:0 12px 32px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.08)}
 }
 /* Phone cards stay legible and cheap to render */
 @media (max-width:640px){
