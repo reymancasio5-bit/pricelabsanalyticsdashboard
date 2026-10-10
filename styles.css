@@ -461,3 +461,66 @@ a{color:inherit}
   .main:has(#dashboard-content:not([hidden]) #view-regions:not([hidden])){height:auto;min-height:100vh;min-height:100dvh}
   #regions-wrap .table-wrap{flex:0 1 auto;min-height:160px;max-height:65vh;max-height:65dvh}
 }
+
+/* Spreadsheet Q&A: a non-modal panel, with the same theme tokens as the dashboard. */
+.chat-launch{position:fixed;right:24px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:9;display:flex;align-items:center;gap:10px;padding:13px 18px;border:1px solid #619a82;border-radius:16px;background:linear-gradient(120deg,#164b3a,#075e49);color:#fff;font-weight:700;box-shadow:0 6px 22px rgba(7,61,44,.2)}
+.chat-launch:hover{background:#14785a}
+.portfolio-chat{position:fixed;right:24px;bottom:calc(82px + env(safe-area-inset-bottom,0px));z-index:30;width:min(440px,calc(100vw - 32px));height:min(680px,calc(100dvh - 110px));display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--line);border-radius:22px;background:var(--card);box-shadow:0 16px 60px rgba(7,35,24,.24)}
+[data-theme="glass"] .portfolio-chat{background:#10271d}
+.chat-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line);flex-shrink:0}
+.chat-header h2{margin:0;font-size:16px;letter-spacing:-.02em}
+.chat-header p{margin:4px 0 0;color:var(--muted);font-size:12px}
+.chat-log{flex:1;min-height:80px;overflow-y:auto;overscroll-behavior:contain;padding:16px 20px}
+.chat-row{display:flex;align-items:flex-end;gap:8px;margin-bottom:18px}
+.chat-row-user{flex-direction:row-reverse;padding-left:28px}
+.chat-avatar{display:flex;align-items:center;justify-content:center;width:30px;height:30px;flex:0 0 30px;border-radius:50%;background:var(--leaf);color:var(--green-d);border:1px solid var(--line);font-size:13px}
+.chat-row-user .chat-avatar{background:#075e49;color:#fff;border-color:#075e49}
+.chat-message{min-width:0;max-width:calc(100% - 38px);padding:10px 13px;border:1px solid var(--line);border-radius:16px 16px 16px 4px;background:var(--bg);overflow-wrap:anywhere;font-size:13px;line-height:1.6}
+.chat-message>strong{font-size:11px;color:var(--green-d)}
+.chat-message p{margin:4px 0 0;white-space:pre-wrap}
+.chat-user{background:var(--leaf);border-radius:16px 16px 4px 16px}
+.chat-message ul{list-style:none;padding:0;margin:10px 0}
+.chat-message li{padding:9px 0;border-bottom:1px solid var(--line)}
+.chat-message li>a,.chat-message li>b{display:block;font-weight:700;color:var(--green-d)}
+.chat-message li>span{display:block;margin-top:2px}
+.chat-message small{display:block;color:var(--muted);font-size:11px;margin-top:10px}
+.chat-form{padding:12px 16px 8px;border-top:1px solid var(--line);flex-shrink:0}
+.chat-form label{display:block;color:var(--muted);font-size:11px;margin-bottom:5px}
+.chat-form>div{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:5px;background:var(--bg)}
+.chat-form>div:focus-within{outline:2px solid var(--green-d);outline-offset:2px}
+.chat-form input{flex:1;min-width:0;border:0;outline:0;background:transparent;padding:7px;font-size:13px}
+.chat-form input::placeholder{color:var(--muted)}
+.chat-form button{width:36px;height:36px;flex:0 0 36px;border:0;border-radius:9px;background:#075e49;color:#fff}
+.chat-footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:0 16px 12px;font-size:10px;color:var(--muted);flex-shrink:0}
+.chat-footer button{background:none;border:0;padding:5px;color:var(--green-d);font-size:11px;white-space:nowrap}
+.chat-progress{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;background:var(--leaf);color:var(--green-d);font-size:12px;flex-shrink:0}
+.chat-progress button,.chat-choice{background:var(--card);color:var(--green-d);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px}
+.chat-choice{margin:6px 6px 0 0;text-align:left}
+.chat-progress #chat-status::before{content:"";display:inline-block;width:7px;height:7px;margin-right:8px;border-radius:50%;background:var(--green);animation:chat-pulse 1.4s ease-in-out infinite}
+.portfolio-chat button:disabled{opacity:.5;cursor:default}
+.chat-interpretation{padding:7px 9px;background:var(--leaf);border-radius:8px}
+.chat-footer>span{flex:1}
+@keyframes chat-pulse{50%{opacity:.35}}
+@media(max-width:640px){
+  .chat-launch{right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));padding:12px 14px}
+  .portfolio-chat{right:8px;bottom:calc(76px + env(safe-area-inset-bottom,0px));width:calc(100vw - 16px);height:calc(100dvh - 92px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));border-radius:18px}
+  .chat-header{padding:14px 16px}.chat-log{padding:14px 16px}.chat-form input{font-size:16px}
+}
+@media(max-height:520px){.portfolio-chat{bottom:8px;top:8px;height:auto}}
+
+/* Data-accuracy reporting shares the chat palette in both themes. */
+.report-dialog{width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 32px);padding:0;border:1px solid var(--line);border-radius:20px;background:var(--card);color:var(--ink);box-shadow:var(--shadow);overflow:auto}
+.report-dialog::backdrop{background:rgba(5,25,18,.48)}
+[data-theme="glass"] .report-dialog{background:#10271d}
+.report-form{padding:16px 20px 20px;display:flex;flex-direction:column;gap:10px;font-size:13px}
+.report-form p{margin:0;line-height:1.6}.report-form label{font-weight:700;margin-top:6px}
+.report-form input,.report-form textarea{width:100%;box-sizing:border-box;background:var(--bg);color:var(--ink);border:1px solid var(--line);padding:10px;border-radius:10px;font:inherit}
+.report-form textarea{resize:vertical;min-height:100px}.report-form small,#report-context{color:var(--muted);font-size:11px}
+.report-form button{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--leaf);color:var(--green-d);font:inherit;cursor:pointer}
+.report-form button:disabled{opacity:.5;cursor:default}#report-send{background:#075e49;color:white;font-weight:700}
+.report-account{padding:12px;background:var(--bg);border-radius:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+#report-account{flex:1;min-width:150px;overflow-wrap:anywhere}#report-preview img{display:block;max-width:100%;max-height:180px;border-radius:10px;margin-bottom:8px}
+#report-status{overflow-wrap:anywhere} .report-form :focus-visible{outline:2px solid var(--green-d);outline-offset:2px}
+@media(max-width:640px){.report-form input,.report-form textarea{font-size:16px}.chat-footer{flex-wrap:wrap}}
+
+.report-honeypot{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}

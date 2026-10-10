@@ -1,7 +1,8 @@
 Replace the bound spreadsheet project's Code.gs with apps-script/Code.gs.
 Save, then choose Deploy > Manage deployments > Edit (pencil) > New version > Deploy.
 Keep the existing deployment URL and access settings. No new services or triggers are required.
-Publish the updated index.html, script.js, and styles.css through your normal website deployment.
+Publish index.html, script.js, styles.css, glass.css, chatbot.js, chat-engine.js, and chat-worker.js together through your normal website deployment.
+Keep the chat scripts in the same directory as index.html; the worker imports chat-engine.js from that directory.
 
 Behavior
 - Server responses are cached for 300 seconds. Change CACHE_SECONDS to adjust freshness.
@@ -34,3 +35,6 @@ Live Apps Script execution time must be measured after deployment; local timings
 Google references
 https://developers.google.com/apps-script/guides/support/best-practices
 https://developers.google.com/apps-script/reference/cache/cache
+
+For no-login screenshot tickets, also install Reports.gs and publish reports.js.
+Follow apps-script/REPORTS-SETUP.txt before enabling this feature.

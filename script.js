@@ -959,6 +959,12 @@
   }
 
   /* ---------- Events ---------- */
+  if (window.PortfolioReports) window.PortfolioReports.init({ url: API_URL, token: API_TOKEN, snapshot: function () { return $('updated').textContent; } });
+  if (window.PortfolioChat) window.PortfolioChat.init(function () {
+    return { loaded: state.loaded, loading: state.loading, ov: state.ov, listings: state.listings, wl: state.wl,
+      updated: $('updated').textContent, reportDate: state.ov && state.ov.reportDate,
+      notice: $('notice').hidden ? '' : $('notice').textContent };
+  });
   window.addEventListener('hashchange', function () { navCount++; route(); });
   document.addEventListener('click', function (e) {
     var t = e.target, back = null, g = null;

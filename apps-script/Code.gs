@@ -13,6 +13,7 @@ function doGet(e) {
     return json_({ ok: false, error: 'Invalid token' });
   }
   try {
+    if (e && e.parameter && e.parameter.action === 'reportConfig') return json_(reportConfig_());
     var params = e && e.parameter || {}, cached = params.fresh === '1' ? null : readCache_();
     if (cached) return cachedResponse_(cached, params);
     var lock = LockService.getScriptLock();

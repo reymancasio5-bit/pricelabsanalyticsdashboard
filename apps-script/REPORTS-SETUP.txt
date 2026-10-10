@@ -1,0 +1,58 @@
+PUBLIC REPORT TICKETS - NO VISITOR SIGN-IN
+
+No Google OAuth Client ID, Google Cloud sign-in setup, or visitor account is needed.
+The owner must still authorize Apps Script to write to their spreadsheet/Drive and
+send email. This one-time owner authorization cannot be removed by website code.
+
+Activate
+1. Open the bound spreadsheet:
+   https://docs.google.com/spreadsheets/d/1dI8qigdEndTr_xMEM7XjBtQmfINZxup5_zSRwkjKf2I/edit
+   Extensions > Apps Script. Update Code.gs and Reports.gs from this directory.
+2. Run configureReports once as the account that should receive notifications.
+   Approve Google permissions. It creates the Report tab and a private folder named
+   Portfolio Desk Report screenshots. It records that account as the email recipient.
+   It does not send a test email. If Report already has incompatible columns, setup
+   stops without overwriting it; review/rename that existing tab first.
+3. Update the existing web-app deployment to a new version, executing as Me (owner).
+   Access must be Anyone, not Anyone with a Google account. Keep the current /exec URL.
+4. Publish index.html, styles.css, script.js, reports.js, chatbot.js and the other
+   existing dashboard assets to GitHub Pages. Website:
+   https://reymancasio5-bit.github.io/pricelabsanalyticsdashboard/
+5. Test with an incognito browser: Report data issue > name/email > description >
+   optional screenshot > Send report. Verify the Report row, private screenshot link,
+   and owner's inbox. This test will create a real ticket and may send an email.
+
+Ticket behavior
+- Report columns: ticket ID, UTC creation time, status, supplied name/email, identity
+  label, summary, description, dashboard page, snapshot time, screenshot URL, email
+  status, and request fingerprint. Users can submit without viewing the sheet.
+- Names/emails are self-reported, not verified. They are not proof of identity.
+- PNG/JPEG only, 2 MB maximum. Screenshots are stored in the owner's Drive folder.
+  The row has a clickable Drive URL, not a public image or an IMAGE() formula.
+  Sharing is never broadened. Only people already allowed to access the folder/file
+  can open screenshots. The Report tab follows the spreadsheet's existing sharing.
+- Report is not included in the dashboard API's public data tabs.
+- The row is saved before email. Mail quota/failure does not discard tickets. See the
+  Email notification column for Sent, Disabled, quota exhausted, or unconfirmed.
+- To use sheet-only reporting, clear REPORT_RECIPIENT in Apps Script Properties.
+- Same ID + same content returns the existing ticket, without duplicate email or row.
+  Retrying a failed screenshot upload continues that same ticket. A changed payload
+  with the same ID is rejected. A pending email is never automatically resent.
+- Text is written literally to prevent submitted formulas from executing in Sheets.
+- Simple anti-spam measures: honeypot, payload validation, 20 new tickets/hour and
+  100/day globally (reportLimit_). These are capacity limits, not bot-proof identity.
+  They can be adjusted by the owner. No limit is based on an unverified email address.
+- Tickets and screenshots remain until the owner removes them. Review the Report tab
+  and Drive storage regularly. Do not share the entire spreadsheet publicly if its
+  ticket contact information should remain private.
+
+Local checks (mocked Google services; no live writes/emails)
+node tests/reports.cjs
+node tests/api-performance.cjs
+node tests/loading-cache.cjs
+node tests/chatbot.cjs
+
+Google references
+https://developers.google.com/apps-script/guides/web
+https://developers.google.com/apps-script/guides/services/authorization
+https://developers.google.com/apps-script/reference/drive/folder
