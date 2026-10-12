@@ -1,0 +1,25 @@
+const assert=require('node:assert/strict');
+const engine=require('../chat-engine.js');
+const data={loaded:true,updated:'Synthetic only',wl:[{region:'North',act:2,next:30,b30:40,past:20},{region:'South',act:1,next:90,b30:80,past:60},{region:'Empty',act:0,next:0,b30:50}],listings:[{id:'a/b',name:'Lake House',city:'North',group:'Team A',occN:20,mkN:40,occ:0,rev:100,revN:50},{id:'two',name:'City Loft',city:'North',group:'Team A',occN:60,mkN:40,occ:40,rev:100,revN:150},{id:'three',name:'Remote Home',city:'South',group:'Team B',occN:null,mkN:80,revN:null,blockedN:true}],setup:{north:{months:[0,null,50,50,50,50,50,50,50,77,50,50]}},propertyTargets:{'a/b':[50,50,50,50,50,50,50,50,50,60,50,50]},page:{kind:'overview'}};
+const original=JSON.stringify(data);
+function report(q,d=data){const r=engine.answer(q,d,{});assert.equal(r.kind,'report',q+': '+r.text);return r.report;}
+let r=report('Portfolio report');assert.equal(r.stats.find(s=>s.label==='Active-listing-weighted mean').value,'50 %');assert.match(r.method,/150 \/ 3 = 50/);assert.equal(r.charts[1].points.reduce((n,p)=>n+p.value,0),100);assert.equal(r.stats.find(s=>s.label==='Occupancy below benchmark').value,'1 / 2 (50%)');
+r=report('Report occupancy for listings');assert.equal(r.stats.find(s=>s.label==='Arithmetic mean').value,'40 %');assert.equal(r.stats.find(s=>s.label==='Missing values').value,'1');assert.equal(r.charts[2].unit,'$');
+r=report('Detailed report for North with charts and suggestions');assert.equal(r.table.length,1);assert.equal(r.table[0].value,30);
+r=report('Report on listings below 40% occupancy');assert.equal(r.table.length,1);assert.equal(r.table[0].label,'Lake House');assert.match(r.suggestions[0],/Lake House/);
+r=report('Graph benchmark gap for listings');assert.equal(r.table[0].value,-20);assert.equal(r.unit,'pp');
+r=report('Report count of listings in Team A');assert.equal(r.stats.find(s=>s.label==='Total').value,'2');
+r=report('Report active listings by region');assert.equal(r.stats.find(s=>s.label==='Total').value,'3');
+r=report('Report on occupancy and RevPAR for listings');assert.equal(r.charts.length,3);
+r=report('Analyze this page',{...data,page:{kind:'region',arg:'North'}});assert.equal(r.table[0].label,'North');
+r=report('Analyze this page',{...data,page:{kind:'listing',arg:'a/b'}});assert.equal(r.table.length,1);assert.equal(r.table[0].label,'Lake House');
+r=report('Analyze this page',{...data,page:{kind:'listings',listingIds:['two']}});assert.equal(r.table.length,1);assert.equal(r.table[0].label,'City Loft');
+r=report('Report North monthly targets');assert.equal(r.table.length,12);assert.equal(r.table[0].value,0);assert.equal(r.table[1].value,null);assert.equal(r.table[9].value,77);
+r=report('Report Lake House monthly targets for October');assert.equal(r.table[0].value,60);
+for(const q of ['Report profit','Report occupancy for Atlantis','Report occupancy next 60 days','Report occupancy next year','Report on occupancy and RevPAR for regions'])assert.equal(engine.answer(q,data,{}).kind,'clarify',q);
+assert.equal(engine.answer('Portfolio report',{loaded:false},{}).kind,'unavailable');
+r=report('Report listings occupancy',{...data,listings:[]});assert.equal(r.points.length,0);assert.equal(r.stats.find(s=>s.label==='Arithmetic mean').value,'Unavailable');
+const many={...data,listings:Array.from({length:25},(_,i)=>({id:String(i),name:'Home '+i,occN:i,mkN:50}))};r=report('Top 20 listings occupancy chart',many);assert.equal(r.points.length,12);assert.equal(r.table.length,25);assert.equal(r.points[0].value,24);
+assert.equal(JSON.stringify(data),original);
+const refreshed=structuredClone(data);refreshed.wl[0].next=60;assert.equal(report('Portfolio report',refreshed).stats.find(s=>s.label==='Active-listing-weighted mean').value,'70 %');
+console.log('PASS: report scopes, page filters, aggregation/denominators, missing/zero/negative values, target sources, chart limits, multi-metric reports and refresh.');

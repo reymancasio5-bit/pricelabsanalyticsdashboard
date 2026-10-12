@@ -499,11 +499,53 @@ a{color:inherit}
 .chat-progress{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;background:var(--leaf);color:var(--green-d);font-size:12px;flex-shrink:0}
 .chat-progress button,.chat-choice{background:var(--card);color:var(--green-d);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px}
 .chat-choice{margin:6px 6px 0 0;text-align:left}
-.chat-progress #chat-status::before{content:"";display:inline-block;width:7px;height:7px;margin-right:8px;border-radius:50%;background:var(--green);animation:chat-pulse 1.4s ease-in-out infinite}
+.chat-progress #chat-status{flex:1;min-width:0}
+.chat-thinking-dots{display:flex;align-items:center;gap:4px;flex-shrink:0;height:18px}
+.chat-thinking-dots i{display:block;width:5px;height:5px;border-radius:50%;background:currentColor;animation:chat-thinking 1s ease-in-out infinite}
+.chat-thinking-dots i:nth-child(2){animation-delay:120ms}
+.chat-thinking-dots i:nth-child(3){animation-delay:240ms}
+.chat-answer-enter{animation:chat-answer-in 280ms ease-out both}
+.chat-answer-enter>*{animation:chat-text-in 360ms ease-out both;animation-delay:var(--chat-reveal-delay,0ms)}
+@keyframes chat-thinking{0%,60%,100%{transform:translateY(0);opacity:.45}30%{transform:translateY(-4px);opacity:1}}
+@keyframes chat-answer-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes chat-text-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.chat-thinking-dots i,.chat-answer-enter,.chat-answer-enter>*{animation:none;opacity:1;transform:none}}
 .portfolio-chat button:disabled{opacity:.5;cursor:default}
 .chat-interpretation{padding:7px 9px;background:var(--leaf);border-radius:8px}
+.portfolio-chat.chat-report-mode{width:min(760px,calc(100vw - 32px))}
+.chat-report{min-width:0;margin-top:16px}
+.chat-report h3{font-size:17px;margin:0 0 8px}
+.chat-report h4{font-size:13px;margin:20px 0 6px}
+.chat-report-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}
+.chat-report-stats div{border-bottom:1px solid var(--line);padding:8px 0}
+.chat-report-stats dt{font-size:11px;color:var(--muted)}
+.chat-report-stats dd{margin:3px 0 0;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.chat-report-chart{margin:18px 0}
+.chat-report-chart figcaption{font-weight:700}
+.chat-report .chat-report-note{font-size:11px;color:var(--muted)}
+.chat-chart-row{margin-top:12px}
+.chat-chart-label{display:flex;justify-content:space-between;gap:12px;font-size:12px}
+.chat-chart-label span{min-width:0;overflow-wrap:anywhere}
+.chat-chart-label strong{white-space:nowrap;font-variant-numeric:tabular-nums}
+.chat-chart-track{position:relative;height:12px;background:var(--line);border-radius:3px;margin-top:5px}
+.chat-chart-bar{position:absolute;top:0;height:100%;background:var(--green);border-radius:3px}
+.chat-chart-negative{background:var(--red)}
+.chat-chart-zero{position:absolute;top:0;height:100%;border-left:1px solid var(--muted)}
+.chat-chart-marker{position:absolute;top:-3px;height:18px;border-left:2px solid var(--ink)}
+.chat-report .chat-chart-row small{margin-top:3px}
+.chat-report details{margin-top:18px}
+.chat-report summary{cursor:pointer;color:var(--green-d);font-weight:600}
+.chat-report-table{overflow:auto;max-height:320px}
+.chat-report table{width:100%;border-collapse:collapse;font-size:12px}
+.chat-report th,.chat-report td{padding:8px;text-align:left;border-bottom:1px solid var(--line)}
+.chat-report th{position:sticky;top:0;background:var(--card)}
+.chat-report li{padding:5px 0}
+.chat-report-tools{margin-top:14px}
+.chat-property-advice{margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+.chat-property-advice h3{font-size:16px;margin:0 0 12px}
+.chat-property-advice h4{font-size:13px;margin:16px 0 6px;color:var(--green-d)}
+.chat-property-advice li{padding:6px 0}
 .chat-footer>span{flex:1}
-@keyframes chat-pulse{50%{opacity:.35}}
 @media(max-width:640px){
   .chat-launch{right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));padding:12px 14px}
   .portfolio-chat{right:8px;bottom:calc(76px + env(safe-area-inset-bottom,0px));width:calc(100vw - 16px);height:calc(100dvh - 92px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));border-radius:18px}

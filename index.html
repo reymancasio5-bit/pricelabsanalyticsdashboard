@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<link rel="stylesheet" href="styles.css?v=20261010-public-tickets">
+<link rel="stylesheet" href="styles.css?v=20261012-property-advice">
 <link rel="stylesheet" href="glass.css?v=20261010-metal-nav" id="glass-css" disabled>
 <script>try{if(localStorage.getItem('pd-theme')==='glass'){document.getElementById('glass-css').disabled=false;document.documentElement.setAttribute('data-theme','glass')}}catch(e){}</script>
 </head>
@@ -248,7 +248,7 @@
     <button class="icon-btn" id="chat-close" type="button" aria-label="Close chat"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
   </header>
   <div class="chat-log" id="chat-log" role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversation" tabindex="0"></div>
-  <div class="chat-progress" id="chat-progress" hidden><span id="chat-status" role="status" aria-live="polite" aria-atomic="true"></span><button id="chat-cancel" type="button">Cancel</button></div>
+  <div class="chat-progress" id="chat-progress" hidden><span class="chat-thinking-dots" aria-hidden="true"><i></i><i></i><i></i></span><span id="chat-status" role="status" aria-live="polite" aria-atomic="true"></span><button id="chat-cancel" type="button">Cancel</button></div>
   <form class="chat-form" id="chat-form">
     <label for="chat-input">Your question</label>
     <div><input id="chat-input" type="text" maxlength="300" autocomplete="off" placeholder="Type a message..." required><button type="submit" aria-label="Send question"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button></div>
@@ -270,9 +270,10 @@
     <button type="submit" id="report-send" disabled>Send report</button>
   </form>
 </dialog>
-<script src="chat-engine.js?v=20261010-source-explanations"></script>
-<script src="chatbot.js?v=20261010-public-tickets"></script>
+<script src="chat-engine.js?v=20261012-property-advice"></script>
+<script src="chat-report-view.js?v=20261012-property-advice"></script>
+<script src="chatbot.js?v=20261012-property-advice"></script>
 <script src="reports.js?v=20261010-public-tickets"></script>
-<script src="script.js?v=20261010-public-tickets"></script>
+<script src="script.js?v=20261012-property-advice"></script>
 </body>
 </html>

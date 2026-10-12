@@ -1,8 +1,9 @@
 Replace the bound spreadsheet project's Code.gs with apps-script/Code.gs.
 Save, then choose Deploy > Manage deployments > Edit (pencil) > New version > Deploy.
 Keep the existing deployment URL and access settings. No new services or triggers are required.
-Publish index.html, script.js, styles.css, glass.css, chatbot.js, chat-engine.js, and chat-worker.js together through your normal website deployment.
+Publish index.html, script.js, styles.css, glass.css, chatbot.js, chat-engine.js, chat-report-view.js, and chat-worker.js together through your normal website deployment.
 Keep the chat scripts in the same directory as index.html; the worker imports chat-engine.js from that directory.
+Chat analysis reports use the loaded snapshot and local calculations, render accessible charts and tables, and download standalone HTML reports. No AI service or additional Apps Script endpoint is required for analysis reports.
 
 Behavior
 - Monthly region targets read all 12 Property Setup month columns, accepting abbreviated or full month names (with optional Target suffix).

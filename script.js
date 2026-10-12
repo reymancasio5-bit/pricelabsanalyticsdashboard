@@ -986,7 +986,12 @@
   /* ---------- Events ---------- */
   if (window.PortfolioReports) window.PortfolioReports.init({ url: API_URL, token: API_TOKEN, snapshot: function () { return $('updated').textContent; } });
   if (window.PortfolioChat) window.PortfolioChat.init(function () {
-    return { loaded: state.loaded, loading: state.loading, ov: state.ov, listings: state.listings, wl: state.wl,
+    var propertyTargets = {};
+    state.listings.forEach(function (l) { propertyTargets[l.id] = propertyMonthlyTargets(state.details[String(l.name).trim().toLowerCase()]); });
+    var routeParts = location.hash.replace(/^#\/?/, '').split('/');
+    var page = {kind:routeParts[0] || 'overview',arg:routeParts[1] ? decodeURIComponent(routeParts[1]) : ''};
+    if (page.kind === 'listings') page.listingIds = filtered().map(function (l) { return l.id; });
+    return { page: page, setup: state.setup, monthly: state.monthly, reportingMonth: state.reportingMonth, propertyTargets: propertyTargets, details: state.details, loaded: state.loaded, loading: state.loading, ov: state.ov, listings: state.listings, wl: state.wl,
       updated: $('updated').textContent, reportDate: state.ov && state.ov.reportDate,
       notice: $('notice').hidden ? '' : $('notice').textContent };
   });

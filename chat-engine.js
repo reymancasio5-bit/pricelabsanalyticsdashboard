@@ -38,7 +38,7 @@
   var PERIODS = { past: { label: 'Past 30D', region: 'past', listing: 'occ', benchmark: null, revpar: 'rev' },
     '15': { label: 'Next 15D', region: 'n14', listing: 'occ15', benchmark: 'b14', revpar: null },
     '30': { label: 'Next 30D', region: 'next', listing: 'occN', benchmark: 'b30', revpar: 'revN' } };
-  var EXAMPLES = ['Portfolio summary', 'Which regions are below benchmark?', 'Top 5 listings by occupancy', 'Average RevPAR in Toronto', 'Compare Toronto and Montreal', 'How many properties need attention?', 'Median occupancy for entire units', 'Lowest occupancy next 15 days', 'Biggest RevPAR drops', 'When was this updated?', 'Remember "GTA" means Toronto and Markham'];
+  var EXAMPLES = ['What should I improve for this property?', 'Suggestions for all properties', 'Analyze this page', 'Portfolio report', 'Report on listing occupancy and RevPAR', 'What does coverage mean?', 'How is average occupancy for regions calculated?', 'Where do monthly targets come from?', 'Portfolio summary', 'Which regions are below benchmark?', 'Top 5 listings by occupancy', 'Average RevPAR in Toronto', 'Compare Toronto and Montreal', 'How many properties need attention?', 'Median occupancy for entire units', 'Lowest occupancy next 15 days', 'Biggest RevPAR drops', 'When was this updated?', 'Remember "GTA" means Toronto and Markham'];
   function clean(s) { return String(s == null ? '' : s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
   function escapeRE(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
   function phrase(q, s) { return new RegExp('(?:^| )' + escapeRE(clean(s)) + '(?= |$)').test(q); }
@@ -290,9 +290,15 @@
     var scope = p.scopes.length ? p.scopes.map(function (s) { return s.name; }).join(', ') : 'whole portfolio';
     var explanation = 'Scope: ' + scope + '. ' + (p.type ? 'Type: ' + p.type + '. ' : '') + (p.statuses.length ? 'Status filter: ' + p.statuses.join(', ') + '. ' : '') + (p.benchmarkFilter ? 'Benchmark filter: ' + p.benchmarkFilter + '. ' : '') + (p.threshold ? 'Filter: ' + p.threshold.op + ' ' + p.threshold.value + '. ' : '');
     var extra = { source: source, plan: p, interpretation: label + ' | ' + p.operation + ' | ' + p.entity, method: explanation };
+    extra.calculation = p.metric === 'gap' ? 'Each gap is occupancy minus benchmark, in percentage points.' : p.metric === 'change' ? 'Each occupancy change is Next 30D minus Past 30D, in percentage points.' : p.metric === 'revparChange' ? 'RevPAR change is reported by the source. Its conventional formula is (Next 30D - Past 30D) / Past 30D x 100; a zero past value has no defined relative change.' : 'Values are read from ' + source + '. Underlying nightly records and workbook formulas are not included.';
+    extra.evidenceCount = records.length;
+    extra.evidence = records.slice(0, 20).map(function (r) { return {label:r.name, value: p.metric === 'gap' ? fmt(r.occupancy,'occupancy') + ' - ' + fmt(r.benchmark,'benchmark') + ' = ' + fmt(r.value,'gap') : fmt(r.value,p.metric === 'revparChange' ? 'occupancy' : p.metric) + (p.entity === 'region' ? ' | Active listings: ' + r.weight : ''), href:r.href}; });
+    if (p.report) extra.reportRecords = records;
     var valid = records.filter(function (r) { return finite(r.value); });
     var countOnly = p.operation === 'count' && p.metric !== 'active';
+    if (countOnly) extra.calculation = 'Count of records remaining after the displayed scope, status and numeric filters: ' + records.length + '. These are tracked report rows, not booking transactions.';
     if (countOnly) return reply(records.length + ' matching ' + (p.entity === 'region' ? 'regions' : 'tracked listings') + '. ' + explanation + 'Counts use the loaded snapshot, not booking transactions.', [], extra);
+    if (p.metric === 'active') extra.calculation = 'Sum the available Active Listings counts from the selected Weekly AM Worklist regions. Report rows are not counted as active IDs.';
     if (p.metric === 'active' && (p.operation === 'count' || p.operation === 'sum' || p.operation === 'list' && !p.scopes.length)) return reply('Active listings: ' + valid.reduce(function (sum, r) { return sum + r.value; }, 0) + '. ' + explanation + (valid.length < records.length ? 'Missing counts excluded.' : ''), [], extra);
     if (p.operation === 'average' || p.operation === 'median') {
       if (p.entity === 'region' && p.operation === 'average' && p.metric !== 'active') valid = valid.filter(function (r) { return finite(r.weight) && r.weight > 0; });
@@ -300,6 +306,7 @@
       var value, method;
       if (p.operation === 'median') { var nums = valid.map(function (r) { return r.value; }).sort(function (a, b) { return a - b; }); var mid = Math.floor(nums.length / 2); value = nums.length % 2 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2; method = 'Median of'; }
       else { var weighted = p.entity === 'region' && p.metric !== 'active'; var denominator = valid.reduce(function (s, r) { return s + (weighted ? r.weight : 1); }, 0); value = valid.reduce(function (s, r) { return s + r.value * (weighted ? r.weight : 1); }, 0) / denominator; method = weighted ? 'Active-listing-weighted mean of' : 'Arithmetic mean of'; }
+      extra.calculation += '\n\n' + (p.operation === 'median' ? 'Sort ' + valid.length + ' comparable values; use ' + (nums.length % 2 ? 'middle value ' + nums[mid] : '(' + nums[mid - 1] + ' + ' + nums[mid] + ') / 2') + ' = ' + round(value) + '.' : (weighted ? 'Weighted sum' : 'Sum') + ' ' + round(valid.reduce(function (sum, r) { return sum + r.value * (weighted ? r.weight : 1); }, 0)) + ' / ' + (weighted ? 'eligible active-listing total ' : 'comparable value count ') + denominator + ' = ' + round(value) + '.');
       return reply(label + ': ' + fmt(value, p.metric === 'revparChange' ? 'occupancy' : p.metric) + '. ' + explanation + method + ' ' + valid.length + ' ' + p.entity + ' values; ' + (records.length - valid.length) + ' missing or ineligible values excluded.', [], extra);
     }
     if (p.operation === 'rank') records = valid.slice().sort(function (a, b) { return (p.direction === 'asc' ? a.value - b.value : b.value - a.value) || a.name.localeCompare(b.name); });
@@ -395,12 +402,315 @@
     }
     return coreAnswer(question,data,context);
   }
+  // Curated local retrieval: exact term aliases rank documents; answers use reviewed text,
+  // never generated claims or instructions found in workbook cells.
+  var KNOWLEDGE = [
+    ['occupancy', ['occupancy','occupancy rate','booking rate'], 'Occupancy is booked nights divided by available nights, multiplied by 100. A 15-night booking total across 20 available nights is 75%. The dashboard reads reported percentages; it does not have the nightly records needed to audit blocked-night treatment.', 'Pricelabs Report: Total Occupancy ( Past 30 Days ), Total Occupancy ( Next 15 Days ), Total Occupancy ( Next 30 Days ); Weekly AM Worklist for regions', '#/listings'],
+    ['revpar', ['revpar','revenue per available room','revenue per available rental'], 'RevPAR is rental revenue divided by available nights, equivalently ADR multiplied by occupancy as a decimal. It is not total revenue or profit. The dashboard reads reported RevPAR; revenue and night-level inputs are not loaded.', 'Pricelabs Report: RevPAR ( Past 30 Days ), RevPAR ( Next 30 Days )', '#/listings'],
+    ['adr', ['adr','average daily rate'], 'ADR is rental revenue divided by booked nights. Example only: $1,000 / 5 nights = $200. ADR excludes unbooked nights from its denominator. ADR inputs are not supplied in the dashboard snapshot.', 'Metric definition; nightly revenue and booked-night inputs are not loaded', '#/listings'],
+    ['monthly', ['monthly target','monthly targets','monthly occupancy target','monthly occupancy targets'], 'Regional monthly targets come from the matching region in Property Setup, January through December. Property targets come from Management Inputs, matched by unique Listing ID. Missing property targets are not replaced with regional targets. These are calendar-month goals, not rolling 15/30-day actuals.', 'Property Setup: Jan-December; Management Inputs: January Target-December Target, Listing ID', '#/regions'],
+    ['benchmark', ['benchmark','benchmarks','target','targets'], 'A benchmark is a spreadsheet-supplied comparison goal, not necessarily a market average. Regions use Weekly AM Worklist benchmarks with Property Setup as a fallback. Properties use the benchmark columns in Pricelabs Report. Monthly goals use Property Setup for regions and Management Inputs for properties. The snapshot contains results, not the workbook formulas that derive rolling benchmarks.', 'Weekly AM Worklist; Property Setup; Pricelabs Report; Management Inputs', '#/regions'],
+    ['gap', ['gap','shortfall','variance','percentage points','percentage point','actual vs target','change vs target'], 'Benchmark gap = occupancy minus benchmark, in percentage points (pp). Example only: 60% - 70% = -10 pp. This differs from relative percentage change: (60 - 70) / 70 x 100 = -14.3%. The dashboard Change vs Target card describes Next 30D versus benchmark.', 'Dashboard comparison calculations; Executive Overview: CHANGE VS TARGET', '#/overview'],
+    ['change', ['occupancy change','30d change','15d change'], 'Occupancy change = forward occupancy minus Past 30D occupancy, in percentage points. The chatbot change query uses Next 30D minus Past 30D. Example only: 60% - 45% = +15 pp. Different rolling windows are being compared; this is not a historical time series.', 'Weekly AM Worklist; Pricelabs Report occupancy fields', '#/regions'],
+    ['revparChange', ['revpar change','revpar drop','revpar growth'], 'Relative RevPAR change is (Next 30D RevPAR - Past 30D RevPAR) / Past 30D RevPAR x 100. The chatbot displays the reported RevPAR Change field. If past RevPAR is zero, that relative calculation is undefined. Rounded displayed inputs may differ from source precision.', 'Pricelabs Report: RevPAR Change', '#/listings'],
+    ['status', ['status','statuses','red','yellow','green','overall status','color','colour'], 'Regional comparison rules: Green at or above benchmark; Yellow below by no more than 10 percentage points; Red more than 10 points below. Regional overall status is the worse of Next 15D and Next 30D. Zero active listings has no active status. Listing labels are reported by Pricelabs Report and are not independently recalculated by the chatbot.', 'Weekly AM Worklist: 15D Status, 30D Status; Pricelabs Report: Status', '#/regions'],
+    ['average', ['average','arithmetic mean','mean','weighted average','weighted mean'], 'Listing averages use the sum of comparable values divided by their count. Regional averages use active-listing weights: sum(value x active listings) / sum(active listings). Missing values and blocked RevPAR are excluded; valid zero values remain. Team values are arithmetic means of comparable listings. A weighted regional result can differ from a simple listing average.', 'Chatbot aggregation rules over the loaded Pricelabs Report and Weekly AM Worklist', '#/overview'],
+    ['median', ['median'], 'Sort the comparable numbers. The median is the middle number for an odd count, or the average of the two middle numbers for an even count. Chatbot medians are unweighted, including regional medians. Missing values are excluded and valid zeros remain.', 'Chatbot aggregation rules', '#/listings'],
+    ['active', ['active listings','active listing','eligible listings','active properties'], 'Active listings are unique listing IDs that are synced, available and shown, with no inactive override. The overview reads Executive Overview; regional totals read Weekly AM Worklist. These are different from counting displayed report rows. Eligibility flags and workbook formulas are not fully included in this snapshot.', 'Executive Overview; Weekly AM Worklist: Active Listings', '#/overview'],
+    ['tracked', ['tracked listings','report rows','tracked properties','source match review'], 'Tracked listings are the eligible report rows shown by this dashboard. Blank names, Source match review rows, and rows with no occupancy data are excluded. A valid 0% occupancy is retained. Tracked report rows and active unique-ID totals measure different populations.', 'Pricelabs Report; dashboard normalization', '#/listings'],
+    ['blocked', ['fully blocked','blocked nights','blocked'], 'A fully blocked RevPAR field is treated as unavailable, not zero. The chatbot excludes that field from RevPAR averages. A numeric 0 is a valid value. The snapshot does not contain a complete nightly availability calendar.', 'Pricelabs Report RevPAR fields; dashboard blocked flags', '#/listings'],
+    ['chart', ['only shows july','only show july','chart stops','missing months'], 'Monthly charts should cover January through December. Blank months can result from empty source cells, an unmatched header or an older API response. The monthly reader supports both abbreviated and full month names. Check Property Setup for a region or Management Inputs for a property, then refresh. A snapshot alone cannot prove which of these caused a missing month.', 'Property Setup; Management Inputs; dashboard API month mapping', '#/regions'],
+    ['missing', ['missing data','missing values','unavailable','n a','blank','blanks','not set'], 'Unavailable or blank means the required value is absent or cannot be parsed; it does not mean zero. Check the source row, header spelling, listing ID match, and last refresh. Monthly targets display a dash when unset. A blank chart alone does not prove poor performance.', 'Loaded snapshot; Data tables; source workbook', '#/data'],
+    ['coverage', ['coverage','actuals coverage'], 'Actuals coverage is supplied by Monthly Performance alongside finalized monthly occupancy. It indicates how much actuals data is covered according to the workbook. The dashboard does not load its numerator, denominator or formula, so it cannot independently reconstruct coverage. 0% coverage should not be interpreted as 0% occupancy.', 'Monthly Performance: Actuals coverage, Finalized monthly occupancy', '#/regions'],
+    ['monthlyPerformance', ['monthly performance','finalized monthly occupancy','monthly actuals'], 'Monthly Performance supplies the region, review month, finalized monthly occupancy and actuals coverage. The regional detail compares the actual with that calendar month target from Property Setup. An unavailable actual gives an unavailable gap and review result.', 'Monthly Performance; Property Setup monthly targets', '#/regions'],
+    ['reporting', ['reporting month','reporting date','report date','rolling period','rolling window','next 15 days','next 30 days','past 30 days','next 60 days'], 'Rolling horizons and calendar months are different. Occupancy queries support Past 30D, Next 15D and Next 30D. RevPAR supports Past 30D and Next 30D. Property Setup supplies the reporting month and a Next 60D benchmark, but the chatbot has no general Next 60D actuals series.', 'Property Setup: Reporting Month; Executive Overview report date; Pricelabs Report', '#/overview'],
+    ['freshness', ['refresh','last updated','cache','cached','freshness','stale data'], 'Answers use the dashboard snapshot, not a new spreadsheet read for each message. Automatic refresh is every five minutes while the page is visible. Manual Refresh forces a new read. Server cache lasts five minutes; a successful browser snapshot may be restored for up to 15 minutes while rechecking. A failed refresh can leave older values visible.', 'Dashboard refresh and cache rules; sidebar Last updated', '#/overview'],
+    ['base', ['base price','recommended base price','pricing'], 'Base Price and Recommended Base Price are supplied by Detailed Listings. The dashboard joins details by an unambiguous property name; it does not recreate the pricing recommendation model. These are different from ADR and RevPAR.', 'Detailed Listings: Base Price, Recommended Base Price', '#/listings'],
+    ['pickup', ['booking pickup','bookings pickup','pickup'], '30D Booking Pickup is the value reported in Detailed Listings under Bookings Pickup 30D. The dashboard does not receive its underlying booking events or source formula and cannot reconstruct its timing or units beyond the sheet label.', 'Detailed Listings: Bookings Pickup 30D', '#/listings'],
+    ['lastBooked', ['last booked','last booking date'], 'Last booked is the Last Booked Date supplied by Detailed Listings. It is separate from the dashboard refresh time. Individual booking records are not loaded.', 'Detailed Listings: Last Booked Date', '#/listings'],
+    ['tasks', ['open tasks','action regions','am actions','account manager'], 'Action regions are supplied by AM Actions, with Overall Status and Open Tasks. The dashboard links to AM Action Inputs for operational follow-up. Open task counts do not explain the cause of an occupancy change.', 'AM Actions: Region, Overall Status, Open Tasks; AM Action Inputs', '#/data'],
+    ['retention', ['retention','client level','client tier','retention level','client level override','retention level override'], 'Client and retention tiers are kept in Management Inputs. Executive Overview reports retention exposure. The snapshot does not establish why a client may leave or independently verify the business judgment behind a tier.', 'Management Inputs; Executive Overview', '#/data'],
+    ['rank', ['rank','ranking'], 'Listing Rank is supplied by Pricelabs Report and describes the dashboard forward RevPAR ranking. A chatbot Top/Bottom question creates a separate ordering from its requested metric, scope and period, excluding unavailable numeric values.', 'Pricelabs Report: Rank; chatbot query sort', '#/listings'],
+    ['sources', ['data source','references','reference','source workbook','spreadsheet','where does the data come from'], 'The dashboard reads a bound Google workbook through its Apps Script API. Executive Overview supplies headline cards; Weekly AM Worklist supplies regional summaries; Pricelabs Report supplies listings; Detailed Listings supplies pricing/bookings; Property Setup supplies regional monthly goals; Management Inputs supplies property monthly goals and management fields.', 'Apps Script dashboard response; Data view', '#/data'],
+    ['capabilities', ['rag','artificial intelligence','ai','chatbot','knowledge base'], 'This assistant uses a local searchable knowledge base, deterministic query parsing and calculations over the loaded snapshot. It needs no AI API or external model. It can explain supported dashboard terms and calculations, but cannot guarantee every possible question, invent missing facts, predict outcomes, or prove business causes from summary figures.', 'Portfolio Desk local chat engine', '#/overview']
+  ];
+  function retrieveKnowledge(question) {
+    var q = clean(question);
+    return KNOWLEDGE.map(function (doc) {
+      var matches = doc[1].filter(function (alias) { return phrase(q, alias); });
+      return { doc: doc, score: matches.reduce(function (best, alias) { return Math.max(best, clean(alias).split(' ').length * 10 + clean(alias).length); }, 0) };
+    }).filter(function (hit) { return hit.score; }).sort(function (a, b) { return b.score - a.score; });
+  }
+  function knowledgeAnswer(question, data, context) {
+    var q = clean(question), hits = retrieveKnowledge(q);
+    if (/^what (is|are|s)\b/.test(q) && parse(question, data, context).plan) return null;
+    if (/\bin\s+/.test(q) && !/\bin (simple|plain) (terms|english)\b/.test(q) && !resolve(q, data, safeAliases(context && context.aliases)).entities.length) return null;
+    var explanatory = /\b(explain|definition|define|meaning|stand for|formula|calculated|calculation|computed|how|why|reference|source|what is|what are|what does|what s)\b/.test(q) || /^where.*\b(find|value|come|source|reference)\b/.test(q);
+    if (/\bhow (many|much)\b/.test(q)) return null;
+    var follow = /^(how (is|was|did you) (this|that|it)|why (is|does) (this|that|it|the result)|where (is|does) (this|that|it)|where can i find (this|that|it|the value)|explain (this|that|it|the result)|what does (this|that|it) mean)/.test(q);
+    follow = follow || /^(how|why|where|explain)\b/.test(q) && /\b(this|that|it|the result|the value)\b/.test(q);
+    if (follow && !hits.length && context && context.lastKnowledge) {
+      var topic = KNOWLEDGE.filter(function (doc) { return doc[0] === context.lastKnowledge; })[0];
+      if (topic) return reply(topic[2], [{label:'Find '+topic[1][0],value:topic[3],href:topic[4]}], {kind:'help',source:topic[3],knowledge:[topic[0]]});
+    }
+    if (follow && context && context.lastPlan) return explainPlan(context.lastPlan, data, q);
+    if (follow && !hits.length || /^(how is this calculated|where can i find the value)$/.test(q)) return clarify('Which metric or result do you mean? Name it, or ask a data question first and then ask how it was calculated.', null, ['How is average occupancy calculated?', 'Where do monthly targets come from?', 'What does coverage mean?']);
+    if (!explanatory && context && (context.pending || context.lastPlan)) return null;
+    if (!explanatory && !(hits.length && hits[0].doc[1].some(function (alias) { return q === clean(alias); }))) return null;
+    if (!hits.length) return null;
+    var entities = resolve(q, data, safeAliases(context && context.aliases));
+    // Values with a named scope go through a calculation, not a generic definition.
+    if (entities.entities.length && !/\b(where|reference|source|definition|define|meaning|mean)\b/.test(q)) return null;
+    var residual = entities.rest;
+    hits.forEach(function (hit) { hit.doc[1].slice().sort(function (a,b) { return b.length-a.length; }).forEach(function (alias) { residual = residual.replace(new RegExp('(^| )' + escapeRE(clean(alias)) + '(?= |$)', 'g'), ' '); }); });
+    residual = residual.replace(/\b(what|is|are|s|a|an|the|does|do|did|it|this|that|mean|means|explain|define|definition|meaning|stand|for|of|how|why|where|can|could|would|i|you|we|find|see|look|up|value|values|come|comes|from|source|reference|references|calculated|calculation|calculate|computed|compute|formula|in|on|to|me|please|simple|plain|english|terms|with|example|examples|and|or|versus|vs|difference|between|compare|different|be|only|shows|show|missing|zero|result|results|used|use|using|work|works|dashboard|data)\b/g, '').trim();
+    if (residual) return null;
+    var doc = hits[0].doc;
+    if (doc[0] !== 'chart' && /\b(why|how many|how much)\b/.test(q) && !/\b(missing|blank|unavailable|zero|different|difference|calculated|computed|formula)\b/.test(q)) return null;
+    var selected = [doc];
+    if (/\b(difference|versus|vs|and|compare)\b/.test(q)) hits.slice(1).forEach(function (hit) {
+      if (selected.length < 3 && !selected.some(function (d) { return d[0] === hit.doc[0]; })) selected.push(hit.doc);
+    });
+    return reply(selected.map(function (d) { return d[2]; }).join('\n\n'), selected.map(function (d) { return { label: 'Find ' + d[1][0], value: d[3], href: d[4] }; }), { kind: 'help', source: selected.map(function (d) { return d[3]; }).join('; '), knowledge: selected.map(function (d) { return d[0]; }), choices: ['How is average occupancy calculated?', 'Where do monthly targets come from?', 'Why can values be unavailable?'] });
+  }
+  function explainPlan(plan, data, question) {
+    var result = execute(plan, data);
+    if (result.kind !== 'answer') return result;
+    result.explained = true;
+    result.text += '\n\n' + (result.calculation || 'These are reported source values. The loaded snapshot does not include the underlying nightly records or workbook formulas.');
+    if (/\bwhy\b/.test(question || '')) result.text += '\n\nThe snapshot does not establish the cause. This explains the numerical result. Pricing, demand and booking timing require separate evidence.';
+    if (result.evidence && result.evidence.length) result.rows = result.evidence.slice(0, 20).concat(result.rows || []);
+    if (result.evidenceCount > 20) result.text += '\n\nShowing 20 contributing rows; the calculation uses all eligible rows.';
+    return result;
+  }
+  function analyticalAnswer(question, data, context) {
+    var q = clean(question), entities = resolve(q, data, safeAliases(context && context.aliases));
+    if (/\bmonthly\b/.test(q) && /\btarget|targets\b/.test(q)) {
+      if (!entities.entities.length) return knowledgeAnswer(question, data, context) || clarify('Name a region or full property name for its monthly targets.');
+      if (!data.loaded) return reply('Load or refresh the dashboard to read monthly targets.', [], {kind:'unavailable'});
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      var full = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      var requested = months.map(function (m,i) { return phrase(q,m) || phrase(q,full[i]) ? i : -1; }).filter(function (i) { return i >= 0; });
+      if (/\b20\d{2}\b/.test(q)) return clarify('Monthly targets are calendar-month settings without year-specific history. Ask for a month without a year.');
+      var rows = [];
+      entities.entities.forEach(function (entity) {
+        var values, href;
+        if (entity.kind === 'place') {
+          var entry = Object.keys(data.setup || {}).filter(function (key) { return clean(key) === clean(entity.name); })[0];
+          values = entry ? data.setup[entry].months : []; href = '#/region/' + encodeURIComponent(entity.name);
+        } else if (entity.kind === 'listing') {
+          var matches = (data.listings || []).filter(function (l) { return clean(l.name) === clean(entity.name); });
+          if (matches.length !== 1) { rows.push({label:entity.name,value:'Ambiguous property name; use its detail page.'}); return; }
+          values = (data.propertyTargets || {})[matches[0].id] || []; href = '#/listing/' + encodeURIComponent(matches[0].id);
+        } else { rows.push({label:entity.name,value:'Monthly targets are defined per region or property, not per team.'}); return; }
+        (requested.length ? requested : months.map(function (_,i) { return i; })).forEach(function (i) { rows.push({label:entity.name + ' - ' + months[i],value:fmt((values || [])[i],'occupancy'),href:href}); });
+      });
+      return reply('Calendar-month targets from the loaded snapshot. Unavailable values are not zero and do not inherit another region or property target.', rows.slice(0,36), {source:'Property Setup for regions; Management Inputs matched by Listing ID for properties'});
+    }
+    var detailTerms = [ ['recommended base price','recommended'], ['base price','base'], ['bookings pickup','pickup'], ['booking pickup','pickup'], ['last booked','lastBooked'], ['bedrooms','bedrooms'] ];
+    var detailTerm = detailTerms.filter(function (term) { return phrase(q,term[0]); })[0];
+    if (detailTerm && entities.entities.some(function (e) { return e.kind === 'listing'; })) {
+      if (!data.loaded) return reply('Load or refresh the dashboard to read property details.',[],{kind:'unavailable'});
+      var detailRows = entities.entities.filter(function (e) { return e.kind === 'listing'; }).map(function (entity) {
+        var matching = (data.listings || []).filter(function (l) { return clean(l.name) === clean(entity.name); });
+        var detail = (data.details || {})[String(entity.name).trim().toLowerCase()];
+        var value = matching.length === 1 && detail && !Array.isArray(detail) ? detail[detailTerm[1]] : null;
+        return {label:entity.name,value:detailTerm[0] + ': ' + (value == null || value === '' ? 'Unavailable' : String(value)),href:matching.length === 1 ? '#/listing/'+encodeURIComponent(matching[0].id) : '#/listings'};
+      });
+      return reply('Reported property details. The snapshot supplies these values, not the source calculation or booking events.',detailRows,{source:'Detailed Listings: '+detailTerm[0]});
+    }
+    if (!/\b(explain|why|how|calculated|calculation|formula|computed)\b/.test(q) || /\bhow (many|much)\b/.test(q)) return null;
+    if (/\b(status|red|yellow|green)\b/.test(q) && entities.entities.length === 1 && entities.entities[0].kind === 'place') {
+      if (!data.loaded) return reply('Load or refresh the dashboard to explain this status.', [], {kind:'unavailable'});
+      var region = (data.wl || []).filter(function (r) { return clean(r.region) === clean(entities.entities[0].name); })[0];
+      if (!region) return clarify('That place has no regional summary in this snapshot.');
+      var rows = [['15', 'n14','b14','s14'],['30','next','b30','s30']].map(function (keys) {
+        var a = region[keys[1]], b = region[keys[2]], gap = finite(a) && finite(b) ? a-b : null;
+        var computed = region.act === 0 ? 'No active listings' : gap === null ? 'Unavailable' : gap >= 0 ? 'Green' : gap >= -10 ? 'Yellow' : 'Red';
+        return {label:'Next '+keys[0]+'D',value:fmt(a,'occupancy')+' - '+fmt(b,'benchmark')+' = '+fmt(gap,'gap')+'. Rule: '+computed+'. Reported: '+(region[keys[3]] || 'Unavailable'),href:'#/region/'+encodeURIComponent(region.region)};
+      });
+      return reply('Regional status uses occupancy minus benchmark: Green at or above 0 pp, Yellow from -10 pp to below 0 pp, Red below -10 pp. Overall uses the worse reported forward status. If the reported status differs from the rule, check the workbook and refresh; I show both rather than silently replacing it.',rows,{kind:'explanation',source:'Weekly AM Worklist; Property Setup benchmark fallback'});
+    }
+    var query = question.replace(/^(?:please\s+)?(?:explain\s+(?:how\s+)?|how\s+(?:is|are|was|were|do you|does the dashboard)\s+|why\s+(?:is|are|was|were)\s+)/i,'')
+      .replace(/\b(calculated|computed|calculation|formula|so|low|high)\b/gi,'').replace(/\b(the result for|the value for)\b/gi,'');
+    var parsed = parse(query, data, context);
+    if (parsed.plan) return explainPlan(parsed.plan, data, q);
+    return null;
+  }
+
+  // Recommendations are conditional reviews, not an automated pricing optimizer.
+  function propertyRecommendations(listing, data) {
+    var gap15 = finite(listing.occ15) && finite(listing.mk15) ? listing.occ15-listing.mk15 : null;
+    var gap30 = finite(listing.occN) && finite(listing.mkN) ? listing.occN-listing.mkN : null;
+    var revenueChange = !listing.blocked && !listing.blockedN && finite(listing.rev) && listing.rev > 0 && finite(listing.revN) ? (listing.revN-listing.rev)/listing.rev*100 : null;
+    var blocked = !!listing.blockedN;
+    var evidence = ['Next 15D occupancy: '+fmt(listing.occ15,'occupancy')+'; benchmark: '+fmt(listing.mk15,'benchmark')+'; gap: '+fmt(gap15,'gap')+'.',
+      'Next 30D occupancy: '+fmt(listing.occN,'occupancy')+'; benchmark: '+fmt(listing.mkN,'benchmark')+'; gap: '+fmt(gap30,'gap')+'.',
+      'RevPAR, Past 30D / Next 30D: '+fmt(listing.blocked ? null : listing.rev,'revpar')+' / '+fmt(blocked ? null : listing.revN,'revpar')+(revenueChange === null ? '. Relative change cannot be reconstructed from these inputs.' : '; change from these inputs: '+round(revenueChange)+'%.')];
+    var first = [], improve = [], avoid = [], keep = [];
+    var availableGaps = [gap15,gap30].filter(finite), worst = availableGaps.length ? Math.min.apply(null,availableGaps) : null;
+    var priority = blocked ? 4 : worst !== null && worst < -10 ? 3 : worst !== null && worst < 0 || revenueChange !== null && revenueChange < 0 ? 2 : worst === null ? 1 : 0;
+    if (blocked) {
+      first.push('Verify whether the forward calendar is intentionally blocked. If blocks are accidental, correct availability and sync before evaluating pricing; retain owner stays and maintenance blocks.');
+      improve.push('Once bookable nights are verified, refresh the dashboard and reassess occupancy against its benchmark.');
+      avoid.push('Do not interpret blocked RevPAR as zero revenue or reduce prices to fix intentional calendar blocks.');
+      keep.push('Keep intentional owner-use, safety and maintenance restrictions in place.');
+    } else if (gap15 !== null && gap15 < 0) {
+      first.push('Prioritize the next 15 days: occupancy is '+round(Math.abs(gap15))+' pp below benchmark. Inspect unbooked dates, bookability, minimum stays and arrival restrictions before considering a targeted rate test.');
+      improve.push('For genuinely sellable gaps, compare current rates with suitable alternatives and check whether stay restrictions prevent bookings. Change one constraint or pricing setting at a time and record the result.');
+    } else if (gap30 !== null && gap30 < 0) {
+      first.push('Review the next 30 days, which are '+round(Math.abs(gap30))+' pp below benchmark. Identify the specific open dates and confirm listing availability, restrictions and rate positioning.');
+      improve.push('Investigate forward booking pace before applying promotions; use date-specific tests only where the calendar and margin constraints support them.');
+    } else if (worst !== null) {
+      first.push('Available occupancy comparisons meet benchmark. Preserve the current setup while reviewing whether achieved revenue is also holding up.');
+    } else {
+      first.push('Complete the missing occupancy or benchmark fields before choosing a pricing intervention. The snapshot cannot establish whether this property is below target.');
+    }
+    if (!blocked && revenueChange !== null && revenueChange < 0) {
+      improve.push('Forward RevPAR is '+round(Math.abs(revenueChange))+'% lower than Past 30D. Check rate mix, occupancy and available nights together; these different windows do not prove that a price cut caused the decline.');
+      avoid.push('Avoid chasing occupancy with broad discounts while RevPAR is weaker. Check net-rate and margin limits before any date-specific test.');
+    } else if (!blocked && revenueChange !== null && revenueChange >= 0) {
+      keep.push('Forward RevPAR is '+round(revenueChange)+'% '+(revenueChange === 0 ? 'unchanged' : 'higher')+' versus Past 30D. Preserve the current revenue discipline while checking which dates still miss occupancy goals.');
+    }
+    if (!blocked && gap15 !== null && gap15 >= 0) keep.push('The Next 15D occupancy comparison meets benchmark. Avoid disturbing already performing near-term dates when testing changes elsewhere.');
+    if (!blocked && gap30 !== null && gap30 >= 0) keep.push('The Next 30D occupancy comparison meets benchmark. Maintain routine monitoring rather than applying portfolio-wide discounts.');
+    if (!blocked && (gap15 === null || gap30 === null || revenueChange === null)) improve.push('Fill missing horizon or RevPAR inputs and refresh before making a stronger recommendation. A zero past RevPAR does not support a percentage-growth calculation.');
+    var detail = (data.details || {})[String(listing.name).trim().toLowerCase()];
+    function numeric(value) { var text = String(value == null ? '' : value).replace(/[$,%\s]/g,''); return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(text) ? Number(text) : null; }
+    var base = detail && !Array.isArray(detail) ? numeric(detail.base) : null, recommended = detail && !Array.isArray(detail) ? numeric(detail.recommended) : null;
+    if (!blocked && finite(base) && base > 0 && finite(recommended) && recommended > 0 && base !== recommended) {
+      evidence.push('Detailed Listings Base Price: $'+round(base)+'; Recommended Base Price: $'+round(recommended)+'.');
+      improve.push('Review the source recommended base price of $'+round(recommended)+' against the current $'+round(base)+'. Treat it as a candidate to validate against date-level demand and your minimum acceptable net rate, not an instruction to apply it automatically.');
+    }
+    if (!improve.length) improve.push('Measure booking pickup, achieved rates and RevPAR after the next refresh; use date-level evidence to identify further opportunities.');
+    if (!keep.length) keep.push('Keep deliberate operating constraints and a record of changes. The available figures do not establish which commercial tactics are working.');
+    avoid.push('Avoid inferring weak photos, poor reviews, low demand or overpricing from these summary figures alone; those explanations need separate evidence.');
+    if (!blocked && worst !== null && worst >= 0) avoid.push('Do not raise rates solely because occupancy meets benchmark; assess remaining availability, demand and revenue before testing a change.');
+    return {id:listing.id,name:listing.name,priority:priority,gap:worst,evidence:evidence,first:first,improve:improve,avoid:avoid,keep:keep,
+      review:'After any justified change, record its date and scope. Recheck forward occupancy, benchmark gaps, booking pickup and RevPAR at the next review. A refreshed rolling window is not proof that the change caused the result.'};
+  }
+  function recommendationAnswer(question, data, context) {
+    var q = clean(question);
+    if (/^(when|why)\b/.test(q)) return null;
+    if (!/\b(suggest|suggestion|suggestions|recommend|recommendation|recommendations|advice|advise|improve|improvement|improvements|avoid|keep|best things?|best actions?|what should|what to do|what can i do|what can we do)\b/.test(q)) return null;
+    if (/\b(report|analysis|analyze|analyse|chart|graph|definition|define|what does)\b/.test(q)) return null;
+    if (!data.loaded) return reply('Load or refresh the dashboard before asking for property recommendations.',[],{kind:'unavailable'});
+    var resolved = resolve(q,data,safeAliases(context && context.aliases)), selected = [], scope = '', page = data.page || {};
+    var residual = resolved.rest.replace(/\b(suggest|suggestion|suggestions|recommend|recommendation|recommendations|advice|advise|improve|improvement|improvements|avoid|keep|best|things|thing|action|actions|what|are|is|tell|some|should|would|could|can|i|we|you|do|to|for|of|on|in|with|and|the|a|an|my|our|this|that|these|those|it|property|properties|listing|listings|region|regions|team|teams|page|current|performance|performace|perform|better|help|give|me|please|based|base|data|all|portfolio|first|next|steps|now|how|which|doing|keep|stop|doing|increase|boost|occupancy|revenue|revpar|booking|bookings|pricing|price|prices|rate|rates)\b/g,'').trim();
+    if (residual || resolved.stale) return clarify('Name a property or region exactly as shown in the dashboard, or open its page and ask "What should I improve for this property?" I cannot apply an unrecognized name or filter safely.');
+    if (resolved.entities.length) {
+      var names = resolved.entities;
+      if (names.some(function (e) { return e.kind === 'listing' && (data.listings || []).filter(function (l) { return clean(l.name) === clean(e.name); }).length > 1; })) return clarify('More than one property has that name. Open its listing detail page and ask for recommendations there.');
+      selected = (data.listings || []).filter(function (l) { return ['place','team','listing'].every(function (kind) {
+        var filters = names.filter(function(e){return e.kind===kind;});
+        return !filters.length || filters.some(function(e){return clean(e.name)===clean(kind==='place'?l.city:kind==='team'?l.group:l.name);});
+      }); }); scope = names.map(function(e){return e.name;}).join(', ');
+    } else if (/\b(all|portfolio)\b/.test(q)) { selected = data.listings || []; scope = 'Portfolio'; }
+    else if (page.kind === 'listing') { selected = (data.listings || []).filter(function(l){return String(l.id)===page.arg;}); scope = 'Current property'; }
+    else if (page.kind === 'region') { selected = (data.listings || []).filter(function(l){return clean(l.city)===clean(page.arg);}); scope = page.arg; }
+    else if (page.kind === 'listings') { selected = (data.listings || []).filter(function(l){return (page.listingIds || []).indexOf(l.id)!==-1;}); scope = 'Current Listings filters'; }
+    else if (context && context.lastRecommendations && context.lastRecommendations.length) { selected = (data.listings || []).filter(function(l){return context.lastRecommendations.indexOf(l.id)!==-1;}); scope = 'Previously discussed properties, refreshed values'; }
+    else if (context && context.lastPlan && context.lastPlan.entity === 'listing') {
+      var previous = execute(Object.assign({},context.lastPlan,{report:true}),data);
+      var links = (previous.reportRecords || []).map(function(r){return r.href;});
+      selected = (data.listings || []).filter(function(l){return links.indexOf('#/listing/'+encodeURIComponent(l.id))!==-1;}); scope = 'Previous query filters, refreshed values';
+    } else return clarify('Which property or region should I review? You can also ask "Suggestions for all properties" or open a listing and ask "What should I improve?"');
+    if (!selected.length) return reply('No matching properties are available in this snapshot. Check the selected scope and refresh.',[],{kind:'unavailable'});
+    var advice = selected.map(function(l){return propertyRecommendations(l,data);}).sort(function(a,b){return b.priority-a.priority || (a.gap == null ? 0 : a.gap)-(b.gap == null ? 0 : b.gap) || a.name.localeCompare(b.name);});
+    return reply('Property improvement review: '+scope+'. Showing '+Math.min(5,advice.length)+' of '+advice.length+' matching properties, prioritized by blocked forward availability and benchmark shortfalls. These are suggested checks, not guaranteed improvements.',[],{
+      kind:'recommendations',recommendations:advice.slice(0,5),recommendationIds:selected.map(function(l){return l.id;}),source:'Pricelabs Report occupancy, benchmarks and RevPAR; Detailed Listings base prices. Snapshot-based rules; no pricing changes are applied.'});
+  }
+
+  function reportAnswer(question, data, context) {
+    var q = clean(question);
+    if (!/\b(report|analysis|analyze|analyse|analyzation|analization|chart|charts|graph|graphs|visualize|visualise)\b/.test(q) || /\b(report date|reporting date|data issue|data error|source match|report rows)\b/.test(q)) return null;
+    if (/\b(what is|define|meaning|definition)\b/.test(q)) return null;
+    if (!data.loaded) return reply('Load or refresh the dashboard before generating a report.', [], {kind:'unavailable'});
+    var query = question.replace(/\b(?:detailed|comprehensive|full|summary|performance|analytical|visual|bar|line|pie)\s+(?:report|analysis|chart|graph)\b/gi,' ')
+      .replace(/\b(report|reports|analysis|analyze|analyse|analyzation|analization|chart|charts|graph|graphs|visualize|visualise|generate|create|prepare|provide|write|build|draw|detailed|comprehensive|suggestions|recommendations|explanations|explanation|insights)\b/gi,' ')
+      .replace(/\b(with|include|including|about|regarding|give me|can you|please)\b/gi,' ').replace(/\s+/g,' ').trim();
+    var working = data, pageNote = '', page = data.page || {}, plan;
+    if (/\b(this|current) page\b/.test(clean(query))) {
+      query = query.replace(/\b(this|current) page\b/gi,' ').trim();
+      if (page.kind === 'listing') {
+        var listing = (data.listings || []).filter(function (l) { return String(l.id) === page.arg; })[0];
+        if (!listing) return clarify('The current listing is not in the loaded snapshot.');
+        working = Object.assign({}, data, {listings:[listing]}); query += ' listings'; pageNote = 'Current listing: ' + listing.name + '.';
+      } else if (page.kind === 'region') { query += ' ' + page.arg; pageNote = 'Current region: ' + page.arg + '.'; }
+      else if (page.kind === 'listings') {
+        working = Object.assign({}, data, {listings:(data.listings || []).filter(function (l) { return (page.listingIds || []).indexOf(l.id) !== -1; })});
+        query += ' listings'; pageNote = 'Current Listings filters, across all result batches.';
+      } else if (['overview','regions'].indexOf(page.kind) !== -1) { query += ' regions'; pageNote = 'Current ' + page.kind + ' page.'; }
+      else return clarify('For this page, specify the region, listing or metric to report. I can analyze Dashboard, Regions, Listings and their detail pages directly.', null, ['Portfolio report', 'Report on occupancy by region', 'Report on listing RevPAR']);
+    }
+    query = query.replace(/\b(portfolio|dashboard)\b/gi, 'regions').replace(/\bper\b/gi,'by').replace(/\bpercentages?\b/gi,'occupancy');
+    if (!clean(query).replace(/\b(for|on|of|and|the)\b/g,'').trim()) query = 'regions';
+    var monthly = /\bmonthly\b/.test(clean(query)) && /\btargets?\b/.test(clean(query));
+    if (monthly) {
+      var targetReply = analyticalAnswer(query, working, context);
+      if (!targetReply || targetReply.kind !== 'answer') return targetReply || clarify('Name a region or property for a monthly-target report.');
+      var points = targetReply.rows.map(function (r) { return {label:r.label,value:r.value === 'Unavailable' ? null : Number(r.value.replace('%','')),href:r.href}; });
+      return reply('Monthly occupancy target report. ' + pageNote, [], {kind:'report',source:targetReply.source,report:{title:'Monthly occupancy targets',summary:'Calendar-month goals from the loaded snapshot; these are targets, not historical actual occupancy.',unit:'%',points:points.slice(0,12),table:points,stats:[],method:'Region: Property Setup. Property: Management Inputs matched by unique Listing ID. Unavailable targets stay missing.',suggestions:['Review months with missing targets in the appropriate source tab before using them for decisions.','Compare finalized monthly actuals and coverage with the matching calendar-month goal.'],limitations:['Chart shows up to 12 values; table contains up to 36 requested region-month or property-month values. Narrow the request for larger comparisons.','No historical trend or forecast is implied by these monthly targets.'],updated:data.updated || 'Unknown'}});
+    }
+    var combined = has(clean(query),'occupancy') && has(clean(query),'revpar');
+    if (combined) query = query.replace(/\b(and|revpar)\b/gi,' ');
+    var parsed = parse(query, working, context);
+    if (!parsed.plan) return parsed.response;
+    plan = Object.assign({}, parsed.plan, {report:true});
+    if (combined && (plan.entity !== 'listing' || plan.period === '15' || plan.threshold || plan.benchmarkFilter || plan.changeSign)) return clarify('For a combined occupancy and RevPAR report, use listings with Past 30D or Next 30D and no numeric filter. Otherwise request one metric at a time.');
+    if (plan.operation === 'summary') { plan.operation = 'list'; plan.entity = 'region'; plan.metric = 'occupancy'; }
+    var result = execute(plan, working);
+    if (result.kind !== 'answer') return result;
+    var records = result.reportRecords || [], metric = plan.metric || 'count', unit = metric === 'revpar' ? '$' : metric === 'active' || metric === 'count' ? 'count' : metric === 'gap' || metric === 'change' ? 'pp' : '%';
+    var points;
+    if (!plan.metric && plan.operation === 'count') {
+      var groups = Object.create(null);
+      records.forEach(function (r) { var name = plan.entity === 'region' ? 'Matching regions' : r.team || 'Other'; groups[name] = (groups[name] || 0) + 1; });
+      points = Object.keys(groups).map(function (name) { return {label:name,value:groups[name]}; });
+    } else points = records.map(function (r) { return {label:r.name,value:finite(r.value) ? r.value : null,benchmark:plan.metric === 'occupancy' && finite(r.benchmark) ? r.benchmark : null,href:r.href,weight:r.weight}; });
+    if (plan.operation === 'rank') points.sort(function (a,b) { return (a.value == null) - (b.value == null) || (plan.direction === 'asc' ? a.value-b.value : b.value-a.value) || a.label.localeCompare(b.label); });
+    var allPoints = points, chartPoints = points.slice(0,plan.operation === 'rank' ? Math.min(plan.limit,12) : 12);
+    var valid = points.filter(function (p) { return finite(p.value); });
+    var weighted = plan.entity === 'region' && metric !== 'active' && metric !== 'count';
+    var eligible = valid.filter(function (p) { return !weighted || finite(p.weight) && p.weight > 0; });
+    var denominator = eligible.reduce(function (sum,p) { return sum + (weighted ? p.weight : 1); },0);
+    var mean = denominator ? eligible.reduce(function (sum,p) { return sum + p.value * (weighted ? p.weight : 1); },0)/denominator : null;
+    var compared = records.filter(function (r) { return finite(r.gap) && (plan.entity !== 'region' || r.weight > 0); });
+    var below = compared.filter(function (r) { return r.gap < 0; }), severe = compared.filter(function (r) { return r.gap < -10; });
+    var stats = [{label:'Matching records',value:String(records.length)},{label:'Comparable values',value:String(valid.length)},{label:'Missing values',value:String(points.length-valid.length)}];
+    if (metric === 'active' || metric === 'count') stats.push({label:'Total',value:String(round(valid.reduce(function (sum,p) { return sum+p.value; },0)))});
+    else stats.push({label:weighted ? 'Active-listing-weighted mean' : 'Arithmetic mean',value:finite(mean) ? (unit === '$' ? '$' : '')+round(mean)+(unit === '$' ? '' : ' '+unit) : 'Unavailable'});
+    if (compared.length) stats.push({label:'Occupancy below benchmark',value:below.length+' / '+compared.length+' ('+round(below.length/compared.length*100)+'%)'});
+    var suggestions = [];
+    if (severe.length) suggestions.push('Prioritize review of '+severe.slice().sort(function(a,b){return a.gap-b.gap;}).slice(0,3).map(function(r){return r.name+' ('+round(r.gap)+' pp)';}).join(', ')+'. Check availability, upcoming bookings and pricing before making a change.');
+    else if (below.length) suggestions.push('Monitor the '+below.length+' below-benchmark record(s), starting with the largest shortfalls. Review booking pace and availability before changing prices.');
+    else if (compared.length) suggestions.push('All '+compared.length+' comparable records meet their benchmark. Continue monitoring; this snapshot alone does not justify a price increase.');
+    if (valid.length < points.length || !valid.length) suggestions.push('Resolve unavailable source values before drawing conclusions; missing values were not converted to zero.');
+    if (/revpar/i.test(metric)) suggestions.push('Review RevPAR together with occupancy and rate data. The snapshot does not establish whether rate, demand or availability caused a change.');
+    if (!suggestions.length) suggestions.push('Validate the source values and review comparable periods before changing operating or pricing decisions.');
+    var period = plan.metric === 'change' || plan.metric === 'revparChange' ? 'Next 30D versus Past 30D' : PERIODS[plan.period].label;
+    var charts = [{title:period+' comparison',unit:unit,points:chartPoints}];
+    if (compared.length && (metric === 'occupancy' || metric === 'gap')) {
+      var bands = [{label:'At or above benchmark',count:compared.length-below.length},{label:'Below by up to 10 pp',count:below.length-severe.length},{label:'Below by more than 10 pp',count:severe.length}];
+      charts.push({title:'Benchmark distribution ('+compared.length+' comparable records)',unit:'%',points:bands.map(function (band) { return {label:band.label+' - '+band.count+' records',value:band.count/compared.length*100}; })});
+    }
+    if ((combined || metric === 'occupancy') && plan.entity === 'listing' && !plan.threshold && !plan.benchmarkFilter && !plan.changeSign && plan.period !== '15') {
+      var revenue = execute(Object.assign({},plan,{metric:'revpar',operation:'list'}),working);
+      if (revenue.reportRecords) charts.push({title:period+' RevPAR (same scope)',unit:'$',points:revenue.reportRecords.slice(0,12).map(function (r) { return {label:r.name,value:finite(r.value)?r.value:null}; })});
+    }
+    return reply('Detailed '+(metric === 'count' ? 'count' : metric)+' report. '+pageNote, [], {kind:'report',source:result.source,plan:plan,report:{
+      title:period+' '+(plan.entity === 'region' ? 'regional' : plan.entity)+' '+metric,summary:result.text,unit:unit,points:chartPoints,charts:charts,table:allPoints,stats:stats,
+      method:result.calculation+' '+result.method+' '+(finite(mean) ? (weighted ? 'Weighted value sum / eligible active-listing count: ' : 'Value sum / comparable record count: ')+round(mean*denominator)+' / '+denominator+' = '+round(mean)+'. ' : '')+' '+(weighted ? 'Regional means exclude zero or missing active-listing weights.' : 'Means exclude unavailable values; valid zero values remain.'),
+      recommendations:plan.entity === 'listing' ? (working.listings || []).filter(function(l){return records.some(function(r){return r.href === '#/listing/'+encodeURIComponent(l.id);});}).map(function(l){return propertyRecommendations(l,working);}).sort(function(a,b){return b.priority-a.priority || (a.gap == null ? 0 : a.gap)-(b.gap == null ? 0 : b.gap) || a.name.localeCompare(b.name);}).slice(0,5) : [],suggestions:suggestions,limitations:['Charts show '+chartPoints.length+' of '+points.length+' matched values; statistics use the full matching set.', 'Rolling period snapshots are not a historical time series. Business causes and forecasts require additional evidence.'],updated:data.updated || 'Unknown'
+    }});
+  }
+
   function answer(question,data,context) {
     // Keep definitions independent of data availability, including common metric typos.
     var quick=String(question).replace(/[a-zA-Z]+/g,function(w){return COMMON_TYPOS[w.toLowerCase()]||w;});
     var explained=definition(quick);if(explained){if(quick!==question)explained.correction='Interpreted your question as: '+quick;return explained;}
     var corrected=correctQuestion(question,data,context);
-    var result=calculationExplanation(corrected.text,data,context)||whAnswer(corrected.text,data,context);
+    var result=recommendationAnswer(corrected.text,data,context)||reportAnswer(corrected.text,data,context)||calculationExplanation(corrected.text,data,context)||analyticalAnswer(corrected.text,data,context)||knowledgeAnswer(corrected.text,data,context)||whAnswer(corrected.text,data,context);
     if(result.kind==='clarify') {
       var suggestions=[], names=catalog(data).filter(function(e){return clean(e.name).indexOf(' ')===-1;});
       corrected.text.replace(/[a-zA-Z]+/g,function(word){
@@ -430,6 +740,10 @@
       options.onStatus('Reading your question');
       schedule(function(){
         var explained=definition(question);
+        if (!explained && !(context && (context.lastPlan || context.lastKnowledge || context.pending))) {
+          var local = knowledgeAnswer(question, {loaded:false}, {});
+          if (local && local.kind === 'help') explained = local;
+        }
         if(explained){complete(explained, {});return;}
         var data, fellBack = false;
         function fallback() {
@@ -456,6 +770,6 @@
     }
     return {start:start,cancel:cancel,isBusy:function(){return busy;}};
   }
-  var api = { readSnapshotFacts: readSnapshotFacts, correctQuestion: correctQuestion, definition: definition, answer: answer, parse: parse, execute: execute, statusFor: statusFor, createResponder: createResponder, safeAliases: safeAliases, vocabulary: WORDS, examples: EXAMPLES, catalog: catalog, clean: clean };
+  var api = { propertyRecommendations: propertyRecommendations, retrieveKnowledge: retrieveKnowledge, knowledgeAnswer: knowledgeAnswer, readSnapshotFacts: readSnapshotFacts, correctQuestion: correctQuestion, definition: definition, answer: answer, parse: parse, execute: execute, statusFor: statusFor, createResponder: createResponder, safeAliases: safeAliases, vocabulary: WORDS, examples: EXAMPLES, catalog: catalog, clean: clean };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.PortfolioQuery = api;
 })(typeof window !== 'undefined' ? window : this);

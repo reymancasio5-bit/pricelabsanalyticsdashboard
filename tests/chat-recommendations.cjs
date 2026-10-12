@@ -1,0 +1,26 @@
+const assert=require('node:assert/strict');
+const e=require('../chat-engine');
+const weak={id:'a/b',name:'Lake House',city:'North',occ15:20,mk15:60,occN:40,mkN:60,occ:60,rev:100,revN:60};
+const strong={id:'two',name:'City Loft',city:'South',occ15:80,mk15:60,occN:85,mkN:70,rev:100,revN:120};
+const blocked={...weak,id:'blocked',name:'Blocked Home',blockedN:true};
+const unknown={id:'missing',name:'Missing Home',city:'North',occN:0,rev:0,revN:50};
+const data={loaded:true,updated:'Synthetic',listings:[weak,strong,blocked,unknown],wl:[{region:'North',act:2}],details:{'lake house':{base:'$150',recommended:'$140'}},page:{kind:'overview'}};
+const original=JSON.stringify(data);
+function advice(q,d=data,context={}) { const r=e.answer(q,d,context); assert.equal(r.kind,'recommendations',q+': '+r.text);return r; }
+for(const q of ['Suggestions for Lake House','How can I improve Lake House performance?','What are the best things to do for Lake House?','What should I avoid for Lake House?','What should I keep doing for Lake House?']) assert.equal(advice(q).recommendations[0].id,'a/b');
+let a=advice('Suggestions for Lake House').recommendations[0];assert.match(a.first.join(' '),/next 15 days/);assert.match(a.evidence.join(' '),/-40 pp/);assert.match(a.improve.join(' '),/40% lower/);assert.match(a.improve.join(' '),/\$140/);assert.match(a.avoid.join(' '),/broad discounts/);assert.ok(a.keep.length);
+a=advice('Advice for City Loft').recommendations[0];assert.match(a.first.join(' '),/meet benchmark/);assert.match(a.keep.join(' '),/20% higher/);assert.match(a.avoid.join(' '),/Do not raise rates solely/);
+a=advice('Advice for Blocked Home').recommendations[0];assert.match(a.first.join(' '),/intentionally blocked/);assert.doesNotMatch(a.improve.join(' '),/rate test|recommended base|40% lower/);assert.match(a.keep.join(' '),/maintenance/);
+a=advice('Advice for Missing Home').recommendations[0];assert.match(a.first.join(' '),/missing/);assert.doesNotMatch(a.evidence.join(' '),/Infinity|NaN/);assert.match(a.evidence.join(' '),/0%/);
+assert.equal(advice('Suggestions for all properties').recommendations[0].id,'blocked');
+assert.deepEqual(advice('Suggestions for North').recommendationIds,['a/b','blocked','missing']);
+assert.equal(advice('What should I improve?',{...data,page:{kind:'listing',arg:'a/b'}}).recommendations[0].id,'a/b');
+assert.equal(advice('What should I improve?',{...data,page:{kind:'listings',listingIds:['two']}}).recommendations[0].id,'two');
+assert.equal(advice('What should I keep?',data,{lastRecommendations:['two']}).recommendations[0].id,'two');
+for(const q of ['Suggestions for Atlantis','What should I improve?','Suggestions for properties below 30%'])assert.equal(e.answer(q,data,{}).kind,'clarify',q);
+assert.equal(e.answer('Suggestions for Lake House',{loaded:false},{}).kind,'unavailable');
+assert.equal(e.answer('Suggestions for Lake House',{...data,listings:[weak,{...weak,id:'duplicate'}]},{}).kind,'clarify');
+const r=e.answer('Report for Lake House',data,{});assert.equal(r.report.recommendations[0].id,'a/b');
+const changed=structuredClone(data);Object.assign(changed.listings[0],{occ15:80,occN:85,revN:130});a=advice('Suggestions for Lake House',changed).recommendations[0];assert.match(a.first.join(' '),/meet benchmark/);assert.doesNotMatch(a.first.join(' '),/below benchmark/);
+assert.equal(JSON.stringify(data),original);
+console.log('PASS: evidence-based advice, do/improve/avoid/keep, blocked/missing/zero inputs, named/page/region scopes, refreshed values and report integration.');

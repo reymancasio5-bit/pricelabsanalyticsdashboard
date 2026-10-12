@@ -1,5 +1,5 @@
 /* Same-origin computation only; no spreadsheet data is sent to another service. */
-importScripts('chat-engine.js?v=20261010-source-explanations');
+importScripts('chat-engine.js?v=20261012-property-advice');
 self.onmessage = function (event) {
   try {
     var request = event.data;
