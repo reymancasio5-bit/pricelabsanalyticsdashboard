@@ -129,7 +129,7 @@
     });
     state.setup = {};
     (data.setup || []).forEach(function (s) {
-      state.setup[String(s.region).toLowerCase()] = { months: s.months.map(pn), b14: pn(s.b14), b30: pn(s.b30), b60: pn(s.b60) };
+      state.setup[String(s.region).toLowerCase()] = { months: MONTHS.map(function (_, i) { return pn((s.months || [])[i]); }), b14: pn(s.b14), b30: pn(s.b30), b60: pn(s.b60) };
     });
     // Fill blanks from Property Setup so gaps and statuses are never n/a when a benchmark exists
     state.wl.forEach(function (r) {
@@ -762,6 +762,33 @@
     return { title: name, sub: 'Portfolio view', parent: 'overview', html: html };
   }
 
+  function monthlyTargetPanel(values, source) {
+    var cm = MONTHS.map(function (m) { return m.toLowerCase(); }).indexOf(String(state.reportingMonth).slice(0, 3).toLowerCase());
+    return panel('Monthly occupancy targets', '<div class="monthly-target-chart"><div class="cols">' + MONTHS.map(function (month, i) {
+      var v = (values || [])[i];
+      return '<div class="col' + (i === cm ? ' now' : '') + '" aria-label="' + month + ': ' + (v == null ? 'Not set' : pct(v)) + '"><div class="col-wrap">' +
+        (v == null ? '' : '<div class="col-bar" style="height:' + clamp(v) + '%"></div>') + '</div><em>' + (v == null ? '&mdash;' : pct(v)) + '</em><span>' + month + '</span></div>';
+    }).join('') + '</div></div><p class="hint">Source: ' + esc(source) + '. Targets by calendar month; the workbook reporting month is highlighted. &mdash; means no target is set.</p>');
+  }
+
+  function propertyMonthlyTargets(detail) {
+    var table = state.tabs['Management Inputs'];
+    if (!detail || !detail.id || !table) return [];
+    function key(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+    var headers = table.headers.map(key), idColumn = headers.indexOf('listingid');
+    if (idColumn < 0) return [];
+    var rows = table.rows.filter(function (row) { return String(row[idColumn]).trim() === String(detail.id).trim(); });
+    if (rows.length !== 1) return [];
+    var full = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    return MONTHS.map(function (month, i) {
+      var aliases = [full[i] + ' Target', month + ' Target', full[i], month];
+      if (i === 8) aliases.push('Sept Target', 'Sept');
+      var column = -1;
+      aliases.some(function (name) { column = headers.indexOf(key(name)); return column >= 0; });
+      return column < 0 ? null : pn(rows[0][column]);
+    });
+  }
+
   function dRegion(name) {
     var r = findRegion(name);
     if (!r) return null;
@@ -779,20 +806,17 @@
       (su.b60 != null ? olRow('Next 60 days benchmark', su.b60, null) : '') +
       '<div class="legend"><span>15D ' + ind(r.s14) + '</span><span>30D ' + ind(r.s30) + '</span></div>');
     html += explain([LOGIC, '<b>Suggested action.</b> ' + (ACTION[statusClass(overall)] || 'No active listings; no occupancy action is required.')]);
-    if (su.months && su.months.length) {
-      var monthName = String(state.reportingMonth).slice(0, 3).toLowerCase();
-      var cm = MONTHS.map(function (m) { return m.toLowerCase(); }).indexOf(monthName);
-      html += panel('Monthly occupancy targets', '<div class="cols">' + su.months.map(function (v, i) {
-        return '<div class="col' + (i === cm ? ' now' : '') + '"><div class="col-wrap"><div class="col-bar" style="height:' + clamp(v || 0) + '%"></div></div><em>' + (v == null ? '' : Math.round(v)) + '</em><span>' + MONTHS[i] + '</span></div>';
-      }).join('') + '</div><p class="hint">Targets by calendar month. The workbook reporting month is highlighted.</p>');
-    }
+    html += monthlyTargetPanel(su.months, 'Property Setup');
     var mp = state.monthly.filter(function (m) { return m.region === name; });
     if (mp.length) {
       html += panel('Monthly performance', '<div class="table-wrap"><table class="tbl"><thead><tr><th>Month</th><th class="num">Target</th><th class="num">Actual</th><th class="num">Coverage</th><th class="num">Actual vs Target</th><th>Review</th></tr></thead><tbody>' +
         mp.map(function (m) {
-          return '<tr><td class="name"><b>' + esc(m.month) + '</b></td><td class="num" data-l="Target">' + esc(m.target || 'n/a') + '</td><td class="num" data-l="Actual">' + esc(m.actual || 'n/a') + '</td>' +
+          var target = (su.months || [])[MONTHS.map(function (month) { return month.toLowerCase(); }).indexOf(String(m.month).slice(0, 3).toLowerCase())], actual = pn(m.actual);
+          var gap = actual == null || target == null ? null : actual - target;
+          var review = gap == null ? 'None' : rate(actual, target);
+          return '<tr><td class="name"><b>' + esc(m.month) + '</b></td><td class="num" data-l="Target">' + pct(target) + '</td><td class="num" data-l="Actual">' + esc(m.actual || 'n/a') + '</td>' +
             '<td class="num" data-l="Coverage">' + esc(m.coverage || 'n/a') + '</td>' +
-            '<td class="num ' + cls(pn(m.gap)) + '" data-l="Actual vs Target">' + esc(m.gap || 'n/a') + '</td><td data-l="Review" data-sv="' + esc(m.status) + '">' + ind(m.status) + '</td></tr>';
+            '<td class="num ' + cls(gap) + '" data-l="Actual vs Target">' + (gap == null ? 'n/a' : sign(gap) + pct(gap)) + '</td><td data-l="Review" data-sv="' + esc(review) + '">' + ind(review) + '</td></tr>';
         }).join('') + '</tbody></table></div>');
     }
     var ls = state.listings.filter(function (l) { return String(l.city).toLowerCase() === String(name).toLowerCase(); });
@@ -820,6 +844,7 @@
       stat('City', esc(l.city || 'n/a'), '', '', 'fa-location-dot') + '</div>';
     html += panel('Occupancy vs benchmark', '<div class="legend"><span><i class="sw sw-fill"></i>Listing</span><span><i class="sw sw-mark"></i>Benchmark</span></div>' +
       olRow('Next 15 days', l.occ15, l.mk15) + olRow('Past 30 days', l.occ, l.mk) + olRow('Next 30 days', l.occN, l.mkN));
+    html += monthlyTargetPanel(propertyMonthlyTargets(d), 'Management Inputs');
     html += panel('RevPAR', '<div class="stats">' + stat('Past 30 days', rvm(l, l.rev), '') + stat('Next 30 days', l.blockedN ? tag('fa-lock', 'Fully blocked') : money(l.revN), '') +
       stat('Change', l.chg == null ? 'n/a' : sign(l.chg) + pct(l.chg), 'Next vs past', cls(l.chg)) + '</div>' +
       moneyRow('Past 30 days', l.rev, maxRev) + moneyRow('Next 30 days', l.revN, maxRev));

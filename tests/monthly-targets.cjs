@@ -1,0 +1,36 @@
+const fs = require('node:fs');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const api = {};
+vm.createContext(api);
+vm.runInContext(fs.readFileSync('apps-script/Code.gs', 'utf8'), api);
+const full = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const mixed = ['Jan','Feb','Mar','April','May','June','July','August','September','October','November','December'];
+const targets = ['68%','70%','72%','75%','78%','82%','85%','84%','80%','77%','74%','73%'];
+for (const headers of [mixed, full, full.map(m => m + ' Target')]) {
+  const table = { headers, rows: [targets], columns: {}, barColumns: {} };
+  assert.deepEqual(Array.from(api.monthlyTargets_(table, targets)), targets);
+}
+const ui = { document: { getElementById: () => ({}) }, setTimeout() {} };
+vm.createContext(ui);
+vm.runInContext(fs.readFileSync('script.js', 'utf8').split('/* ---------- Events ---------- */')[0] + 'globalThis.api = {state, normalize, dRegion, monthlyTargetPanel, propertyMonthlyTargets};})();', ui);
+const {state, normalize, dRegion, monthlyTargetPanel, propertyMonthlyTargets} = ui.api;
+normalize({reportingMonth: 'Oct 2026', setup: [{region:'North',months:targets}], worklist:[['','North','1']], monthly:[{region:'North',month:'Oct 2026',target:'99%'}]});
+assert.match(dRegion('North').html, /data-l="Target">77%/);
+state.monthly[0].actual = '80%';
+state.monthly[0].gap = '-19%';
+state.monthly[0].status = 'Red';
+assert.match(dRegion('North').html, /data-l="Actual vs Target">\+3%/);
+assert.match(dRegion('North').html, /data-l="Review" data-sv="Green"/);
+state.tabs = {'Management Inputs': {headers:['Listing ID', ...full.map(m => m + ' Target')], rows:[['listing-1', ...targets], ['listing-2', ...targets.map(() => '0%')]]}};
+assert.deepEqual(Array.from(propertyMonthlyTargets({id:'listing-1'})), targets.map(parseFloat));
+assert.deepEqual(Array.from(propertyMonthlyTargets({id:'listing-2'})), Array(12).fill(0));
+assert.equal(propertyMonthlyTargets({id:'unknown'}).length, 0);
+state.tabs['Management Inputs'].rows.push(['listing-1', ...targets]);
+assert.equal(propertyMonthlyTargets({id:'listing-1'}).length, 0, 'Ambiguous IDs must not select a target');
+const html = monthlyTargetPanel([0,null,75], 'Property Setup');
+assert.match(html,/Jan: 0%/);
+assert.match(html,/Feb: Not set/);
+assert.equal((html.match(/class="col-bar"/g)||[]).length, 2);
+assert.equal((html.match(/aria-label=/g)||[]).length, 12);
+console.log('PASS: month header aliases, regional source, property ID matching, duplicate/missing IDs, zero and missing targets.');

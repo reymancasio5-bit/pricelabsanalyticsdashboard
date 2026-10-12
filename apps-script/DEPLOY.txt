@@ -5,6 +5,9 @@ Publish index.html, script.js, styles.css, glass.css, chatbot.js, chat-engine.js
 Keep the chat scripts in the same directory as index.html; the worker imports chat-engine.js from that directory.
 
 Behavior
+- Monthly region targets read all 12 Property Setup month columns, accepting abbreviated or full month names (with optional Target suffix).
+- Property detail targets read Management Inputs by unique Listing ID. Unmatched/duplicate IDs remain unset; regional targets are not substituted.
+- Deploy the monthly-targets Code.gs and frontend together, then use Refresh to replace the old response. The server cache namespace has changed.
 - Server responses are cached for 300 seconds. Change CACHE_SECONDS to adjust freshness.
 - Refresh sends fresh=1 and forces a new spreadsheet read, then replaces the cache.
 - Normal requests can send since=<version>; matching cached versions return a small notModified response.

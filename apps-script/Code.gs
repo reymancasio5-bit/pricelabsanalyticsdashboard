@@ -5,7 +5,7 @@
 var API_TOKEN = 'e5f2a9b8c3d7e1f0a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1';
 var CACHE_SECONDS = 300;
 // Change this namespace whenever the response-building code changes.
-var CACHE_KEY = 'dashboard-v3';
+var CACHE_KEY = 'dashboard-v4-monthly-targets';
 var CACHE_CHUNK_SIZE = 20000; // At most 80 KB of UTF-8, below CacheService's 100 KB limit.
 
 function doGet(e) {
@@ -121,6 +121,15 @@ function percent_(t, i, names) {
 function required_(t, names, sheet) {
   names.forEach(function (name) { if (column_(t, name) < 0) throw new Error(sheet + ': missing header ' + name); });
 }
+function monthlyTargets_(table, row) {
+  var short = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var full = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return short.map(function (month, i) {
+    var aliases = [month, full[i], month + ' Target', full[i] + ' Target'];
+    if (i === 8) aliases.push('Sept', 'Sept Target');
+    return value_(table, row, aliases);
+  });
+}
 function dashboard_(ss) {
   var report = table_(ss, 'Pricelabs Report', 1, true), details = table_(ss, 'Detailed Listings', 4);
   required_(report, ['Listing Name', 'Total Occupancy ( Next 15 Days )', 'Total Occupancy ( Past 30 Days )', 'Total Occupancy ( Next 30 Days )', 'Next 30D Benchmark %', 'Status'], 'Pricelabs Report');
@@ -155,7 +164,7 @@ function dashboard_(ss) {
   });
   var setupTable = table_(ss, 'Property Setup');
   var setup = setupTable.rows.filter(function (r) { return value_(setupTable, r, 'Region') && /^\d+$/.test(value_(setupTable, r, 'Active Listings')); }).map(function (r) {
-    return { region: value_(setupTable, r, 'Region'), months: ['Jan','Feb','Mar','April','May','June','July','Aug','Sep','Oct','Nov','Dec'].map(function (m) { return value_(setupTable, r, m); }),
+    return { region: value_(setupTable, r, 'Region'), months: monthlyTargets_(setupTable, r),
       b14: value_(setupTable, r, 'Next 15D benchmark'), b30: value_(setupTable, r, 'Next 30D benchmark'), b60: value_(setupTable, r, '60D Benchmark %') };
   });
   var actionTable = table_(ss, 'AM Actions');
