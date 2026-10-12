@@ -30,15 +30,29 @@ function harness(reduced = false) {
     advance(ms){now+=ms;for(const [id,j] of jobs)if(j.at<=now){jobs.delete(id);j.fn();}},
     answers(){return get('chat-log').children.filter(r=>r.children[1].children.some(c=>c.textContent==='Prepared answer')).length;}};
 }
+let greeting = harness();
+assert.equal(greeting.get('chat-log').children.length,0,'Greeting starts when chat is opened');
+greeting.get('portfolio-chat').hidden = true;
+greeting.get('chat-launch').events.click();
+assert.equal(greeting.get('chat-progress').hidden,false);
+greeting.advance(2499);assert.equal(greeting.get('chat-log').children.length,0);
+greeting.advance(1);assert.equal(greeting.get('chat-log').children.length,1);
+assert.equal(greeting.get('chat-log').children[0].children[1].children[1].textContent,'Hi! how can I help you?');
+greeting.get('chat-close').events.click();greeting.get('chat-launch').events.click();greeting.advance(3000);
+assert.equal(greeting.get('chat-log').children.length,1,'Reopening does not duplicate the greeting');
+greeting.get('chat-clear').events.click();assert.equal(greeting.get('chat-log').children.length,0);
+greeting.advance(2499);assert.equal(greeting.get('chat-log').children.length,0);
+greeting.advance(1);assert.equal(greeting.get('chat-log').children.length,1,'Clear repeats the greeting transition');
 let h = harness(); h.ask(); h.finish();
 assert.equal(h.get('chat-progress').hidden,false);
 assert.equal(h.submit.disabled,true);
 assert.equal(h.answers(),0);
 h.ask(); assert.equal(h.starts(),1,'New requests remain blocked during the presentation delay');
-h.advance(649);assert.equal(h.answers(),0);
+h.advance(2499);assert.equal(h.answers(),0);
 h.advance(1);assert.equal(h.answers(),1);assert.equal(h.get('chat-progress').hidden,true);assert.equal(h.submit.disabled,false);
-h=harness();h.ask();h.finish();h.get('chat-cancel').events.click();h.advance(1000);assert.equal(h.answers(),0);assert.equal(h.jobs.size,0);
-h=harness();h.ask();h.finish();h.get('chat-clear').events.click();h.advance(1000);assert.equal(h.answers(),0);assert.equal(h.get('chat-log').children.length,1);
-h=harness(true);h.ask();h.finish();assert.equal(h.answers(),1);assert.equal(h.jobs.size,0,'Reduced motion does not wait');
-h=harness();h.ask();h.advance(900);h.finish();assert.equal(h.answers(),1);assert.equal(h.jobs.size,0,'Slow computation adds no presentation delay');
+h=harness();h.ask();h.finish();h.get('chat-cancel').events.click();h.advance(3000);assert.equal(h.answers(),0);assert.equal(h.jobs.size,0);
+h=harness();h.ask();h.finish();h.get('chat-clear').events.click();h.advance(3000);assert.equal(h.answers(),0);assert.equal(h.get('chat-log').children.length,1);
+h=harness(true);h.ask();h.finish();assert.equal(h.answers(),0);h.advance(2500);assert.equal(h.answers(),1);assert.equal(h.jobs.size,0,'Reduced motion keeps the requested timing; CSS disables animation');
+h=harness();h.ask();h.advance(1000);h.finish();h.advance(1499);assert.equal(h.answers(),0);h.advance(1);assert.equal(h.answers(),1,'Computation time counts toward the 2.5-second minimum');
+h=harness();h.ask();h.advance(3000);h.finish();assert.equal(h.answers(),1);assert.equal(h.jobs.size,0,'Slow computation adds no presentation delay');
 console.log('PASS: visible thinking beat, duplicate submission prevention, cancellation, clear, reduced motion and slow-query timing.');

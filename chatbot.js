@@ -10,12 +10,11 @@
     var cancel = document.getElementById('chat-cancel'), memoryKey = 'pd-chat-aliases-v1';
     var context = { aliases: Object.create(null), lastPlan: null, pending: null }, storageAvailable = true;
     try { context.aliases = engine.safeAliases(JSON.parse(localStorage.getItem(memoryKey) || '{}')); } catch (e) { storageAvailable = false; }
-    var thinkingAt = 0, replyTimer = null;
-    function reducedMotion() { return root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+    var thinkingAt = 0, replyTimer = null, greeted = false;
     function isBusy() { return responder.isBusy() || replyTimer !== null; }
     function present(reply, data) {
-      // Give fast local answers one brief thinking beat; slow queries add no delay.
-      var delay = reducedMotion() ? 0 : Math.max(0, 650 - (Date.now() - thinkingAt));
+      // Keep the thinking state visible for at least 2.5 seconds, including computation time.
+      var delay = Math.max(0, 2500 - (Date.now() - thinkingAt));
       if (!delay) { render(reply, data); return; }
       replyTimer = root.setTimeout(function () { replyTimer = null; render(reply, data); }, delay);
     }
@@ -23,7 +22,7 @@
       try { localStorage.setItem(memoryKey, JSON.stringify(context.aliases)); storageAvailable = true; }
       catch (e) { storageAvailable = false; }
     }
-    function open(show) { panel.hidden = !show; launch.setAttribute('aria-expanded', String(show)); if (show) input.focus(); else launch.focus(); }
+    function open(show) { panel.hidden = !show; launch.setAttribute('aria-expanded', String(show)); if (show) { if (!greeted) welcome(); input.focus(); } else launch.focus(); }
     function scroll() { log.scrollTop = log.scrollHeight; }
     function message(text, user) {
       var row = document.createElement('div'); row.className = 'chat-row' + (user ? ' chat-row-user' : '');
@@ -122,8 +121,12 @@
     document.getElementById('chat-clear').addEventListener('click', function () { stop(false); context.lastPlan = null; context.pending = null; context.lastKnowledge = null; context.lastRecommendations = null; log.textContent = ''; welcome(); input.focus(); });
     log.addEventListener('click', function (e) { if (e.target.closest('a')) open(false); });
     window.addEventListener('pagehide', function () { stop(false); });
-    function welcome() { message('Hi! how can I help you?'); }
-    welcome();
+    function welcome() {
+      greeted = true;
+      busy(true);
+      status.textContent = 'Preparing your welcome';
+      present({text:'Hi! how can I help you?', rows:[], kind:'help'}, {});
+    }
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = engine;
   else root.PortfolioChat = { init: init };
