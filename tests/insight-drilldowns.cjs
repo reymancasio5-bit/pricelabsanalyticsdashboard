@@ -12,10 +12,12 @@ const { normalize, renderInsights, dInsight } = context.api;
 normalize({ listings: [
   { id: 'down', name: 'Declining home', occN: 40, rev: 100, revN: 50, status: 'Red' },
   { id: 'up', name: 'Improving home', occN: 60, rev: 50, revN: 100, status: 'Green' },
+  { id: 'unflagged-down', name: 'Unflagged decline', occN: 40, rev: 100, revN: 50, status: 'Improving' },
   { id: 'blocked', name: 'Blocked home', occN: 0, rev: 'Fully blocked', revN: null }
 ] });
 renderInsights();
-for (const key of ['declining', 'occupancy', 'revpar', 'flagged', 'blocked']) {
+assert.doesNotMatch(elements.pulse.innerHTML, /RevPAR Declining|#\/insight\/declining/);
+for (const key of ['occupancy', 'revpar', 'flagged', 'blocked']) {
   assert.ok(elements.pulse.innerHTML.includes('data-go="#/insight/' + key + '"'));
   const detail = dInsight(key);
   assert.equal(detail.parent, 'overview');
@@ -32,6 +34,8 @@ assert.match(dInsight('occupancy').html, /Improving home/);
 assert.match(dInsight('revpar').html, /#\/listing\/down/);
 assert.doesNotMatch(dInsight('revpar').html, /Blocked home/);
 assert.equal(dInsight('invalid'), null);
+assert.match(dInsight('declining').html, /Unflagged decline/);
+assert.doesNotMatch(dInsight('flagged').html, /Unflagged decline/);
 for (const [rev, revN, expected] of [
   [410, 207, 'Declining'], [50, 100, 'Improving'], [100, 100, 'Stable'],
   [100, 0, 'Declining'], [0, 0, 'Stable'], [null, 100, 'Unavailable'],
@@ -62,4 +66,4 @@ for (const [rev, revN, expected] of [
 }
 normalize({ listings: [] });
 assert.match(dInsight('declining').html, /No listings match/);
-console.log('PASS: all five insight cards link to matching data, listing links, and empty states.');
+console.log('PASS: four insight cards link to matching data; RevPAR Declining card is removed; filters and empty states pass.');

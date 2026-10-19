@@ -427,7 +427,7 @@
   }
   function insightListings(key) {
     return state.listings.filter(function (l) {
-      if (key === 'declining' || key === 'flagged') return !l.blocked && !l.blockedN && l.rev != null && l.revN != null && l.revN < l.rev;
+      if (key === 'declining' || key === 'flagged') return !l.blocked && !l.blockedN && l.rev != null && l.revN != null && l.revN < l.rev && (key !== 'flagged' || statusClass(l.status) === 'r');
       if (key === 'blocked') return l.blocked;
       if (l.blocked || l.blockedN || l.rev == null || l.revN == null || l.revN === l.rev) return false;
       if (key === 'occupancy') return l.occN != null || l.mkN != null;
@@ -442,7 +442,7 @@
       declining: 'Listings where Next 30D RevPAR is below Past 30D RevPAR. Missing or fully blocked periods are excluded.',
       occupancy: 'Listings with improving or declining RevPAR and Next 30D occupancy or benchmark data. Stable and unavailable comparisons are hidden here. Dashboard averages still use all available values.',
       revpar: 'Listings with improving or declining RevPAR. Stable and unavailable comparisons are hidden here. Dashboard averages still use all available values; fully blocked past periods are excluded.',
-      flagged: 'Listings with declining RevPAR: Next 30D is below Past 30D. Equal, improving, missing and fully blocked comparisons are excluded.',
+      flagged: 'Listings flagged with a red status in the source report whose Next 30D RevPAR is below Past 30D. Equal, improving, missing and fully blocked comparisons are excluded.',
       blocked: 'Listings fully blocked over the past 30 days, with no past RevPAR to compare.'
     };
     var rows = insightListings(key);
@@ -466,11 +466,9 @@
     var chg = revP ? (rev / revP - 1) * 100 : null, gap = occN != null && mkN != null ? occN - mkN : null;
     var need = insightListings('flagged').length;
     var blocked = L.filter(function (l) { return l.blocked; }).length;
-    var declining = insightListings('declining').length;
-    $('pulse').innerHTML = stat('RevPAR Declining', declining, 'Next 30D below Past 30D', declining ? 'down' : 'up', 'fa-arrow-trend-down', '#/insight/declining') +
-      stat('Average Next 30D Occupancy', pct(occN), mkN == null ? '' : 'Benchmark ' + pct(mkN) + ', ' + sign(gap) + pct(gap), cls(gap), 'fa-chart-pie', '#/insight/occupancy') +
+    $('pulse').innerHTML = stat('Average Next 30D Occupancy', pct(occN), mkN == null ? '' : 'Benchmark ' + pct(mkN) + ', ' + sign(gap) + pct(gap), cls(gap), 'fa-chart-pie', '#/insight/occupancy') +
       stat('Avg RevPAR Next 30D', money(rev), chg == null ? '' : sign(chg) + pct(chg) + ' vs past', cls(chg), 'fa-sack-dollar', '#/insight/revpar') +
-      stat('Flagged listings', need, 'Declining RevPAR', need ? 'down' : 'up', 'fa-arrow-trend-down', '#/insight/flagged') +
+      stat('Flagged listings', need, 'Source-flagged, declining RevPAR', need ? 'down' : 'up', 'fa-arrow-trend-down', '#/insight/flagged') +
       stat('Fully blocked', blocked, 'No past RevPAR', '', 'fa-lock', '#/insight/blocked');
 
     var gs = group(L, 'status').sort(function (a, b) { return b.items.length - a.items.length; });

@@ -7,8 +7,8 @@ const context = { setTimeout() {}, document: { getElementById(id) {
 } } };
 vm.createContext(context);
 vm.runInContext(fs.readFileSync('script.js', 'utf8').split('/* ---------- Events ---------- */')[0] +
-  'globalThis.api = { normalize, renderInsights };})();', context);
-const { normalize, renderInsights } = context.api;
+  'globalThis.api = { normalize, renderInsights, insightListings };})();', context);
+const { normalize, renderInsights, insightListings } = context.api;
 function render(rows) {
   normalize({ listings: rows.map((row, i) => ({ name: 'Listing ' + i, occN: 40, ...row })) });
   renderInsights();
@@ -26,10 +26,11 @@ const html = render([
   { rev: 100, revN: 'Fully blocked' },
   { rev: 100, revN: 20, status: 'Source match review' }
 ]);
-assert.match(html, /RevPAR Declining/);
-assert.match(html.split('</div>')[0], />2</);
+assert.doesNotMatch(html, /RevPAR Declining/);
+assert.equal(insightListings('declining').length, 2);
 assert.doesNotMatch(html, /Listings tracked/i);
-assert.match(render([{ rev: 10, revN: 20 }]).split('</div>')[0], />0</);
+render([{ rev: 10, revN: 20 }]);
+assert.equal(insightListings('declining').length, 0);
 render([]);
 assert.equal(elements.pulse.innerHTML, '');
 console.log('PASS: declining RevPAR counts direct comparisons, valid zero, missing/blocked values, eligibility, and empty refresh.');
