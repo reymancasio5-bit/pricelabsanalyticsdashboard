@@ -71,6 +71,7 @@
   function ind(text) {
     var t = String(text || 'None'), c = statusClass(t), i = ICO[c];
     if (/improv/i.test(t)) i = 'fa-arrow-trend-up';
+    else if (/declin/i.test(t)) i = 'fa-arrow-trend-down';
     else if (isStable(t)) i = ICO.stable;
     else if (/need|attention/i.test(t)) i = 'fa-circle-exclamation';
     return '<span class="ind ' + c + '" title="' + esc(t) + '" role="img" aria-label="' + esc(t) + '"><i class="fa-solid ' + i + '" aria-hidden="true"></i></span>';
@@ -312,9 +313,9 @@
     return '<div class="ol"><div class="ol-head"><b>' + heading(label) + '</b><span class="ol-val">' + money(v) + '</span></div>' +
       '<div class="bar-track"><div class="bar-fill" style="width:0" data-w="' + clamp(max ? v / max * 100 : 0) + '"></div></div></div>';
   }
-  function stat(label, val, sub, c, icon) {
+  function stat(label, val, sub, c, icon, href) {
     var status = /class="ind [^"]*" title="([^"]*)"/.exec(String(val));
-    return '<div class="stat"><span class="stat-label">' + (icon ? '<i class="fa-solid ' + icon + '" aria-hidden="true"></i>' : '') + '<span class="stat-label-text">' + heading(label) + '</span></span><b class="' + (c || '') + '">' + val + '</b>' + (status ? '<em class="desktop-status">' + status[1] + '</em>' : '') + (sub ? '<em>' + sub + '</em>' : '') + '</div>';
+    return '<div class="stat' + (href ? ' clk' : '') + '"' + go(href) + '><span class="stat-label">' + (icon ? '<i class="fa-solid ' + icon + '" aria-hidden="true"></i>' : '') + '<span class="stat-label-text">' + heading(label) + '</span></span><b class="' + (c || '') + '">' + val + '</b>' + (status ? '<em class="desktop-status">' + status[1] + '</em>' : '') + (sub ? '<em>' + sub + '</em>' : '') + '</div>';
   }
   function panel(title, inner) { return '<article class="panel"><h2>' + heading(title) + '</h2>' + inner + '</article>'; }
   function explain(paras) { return panel('What this means', paras.map(function (p) { return '<p class="txt-p">' + p + '</p>'; }).join('')); }
@@ -424,6 +425,36 @@
         '<div class="right"><strong class="' + cls(l.chg) + '">' + sign(l.chg) + pct(l.chg) + '</strong><span>' + money(l.rev) + ' to ' + (l.blockedN ? tag('fa-lock', 'Fully blocked') : money(l.revN)) + '</span></div>' + chev(1) + '</a></li>';
     }).join('');
   }
+  function insightListings(key) {
+    return state.listings.filter(function (l) {
+      if (key === 'declining' || key === 'flagged') return !l.blocked && !l.blockedN && l.rev != null && l.revN != null && l.revN < l.rev;
+      if (key === 'blocked') return l.blocked;
+      if (l.blocked || l.blockedN || l.rev == null || l.revN == null || l.revN === l.rev) return false;
+      if (key === 'occupancy') return l.occN != null || l.mkN != null;
+      if (key === 'revpar') return l.revN != null || (!l.blocked && l.rev != null);
+      return false;
+    });
+  }
+  function dInsight(key) {
+    var titles = { declining: 'RevPAR Declining', occupancy: 'Average Next 30D Occupancy', revpar: 'Avg RevPAR Next 30D', flagged: 'Flagged Listings', blocked: 'Fully Blocked' };
+    if (!titles[key]) return null;
+    var descriptions = {
+      declining: 'Listings where Next 30D RevPAR is below Past 30D RevPAR. Missing or fully blocked periods are excluded.',
+      occupancy: 'Listings with improving or declining RevPAR and Next 30D occupancy or benchmark data. Stable and unavailable comparisons are hidden here. Dashboard averages still use all available values.',
+      revpar: 'Listings with improving or declining RevPAR. Stable and unavailable comparisons are hidden here. Dashboard averages still use all available values; fully blocked past periods are excluded.',
+      flagged: 'Listings with declining RevPAR: Next 30D is below Past 30D. Equal, improving, missing and fully blocked comparisons are excluded.',
+      blocked: 'Listings fully blocked over the past 30 days, with no past RevPAR to compare.'
+    };
+    var rows = insightListings(key);
+    var table = rows.length ? '<div class="table-wrap"><table class="tbl"><thead><tr><th>Listing</th><th>Region</th><th class="num">Next 30D Occupancy</th><th class="num">Benchmark</th><th class="num">RevPAR Past 30D</th><th class="num">RevPAR Next 30D</th><th>RevPAR Status</th></tr></thead><tbody>' + rows.map(function (l) {
+      var revStatus = l.blocked || l.blockedN || l.rev == null || l.revN == null ? 'Unavailable' : l.revN < l.rev ? 'Declining' : l.revN > l.rev ? 'Improving' : 'Stable';
+      return '<tr class="clk"' + go('#/listing/' + enc(l.id)) + '><td class="name"><b>' + esc(l.name) + '</b></td><td data-l="Region">' + esc(l.city) + '</td>' +
+        '<td class="num" data-l="Next 30D Occupancy">' + pct(l.occN) + '</td><td class="num" data-l="Benchmark">' + pct(l.mkN) + '</td>' +
+        '<td class="num" data-l="RevPAR Past 30D">' + rvm(l, l.rev) + '</td><td class="num" data-l="RevPAR Next 30D">' + (l.blockedN ? tag('fa-lock', 'Fully blocked') : money(l.revN)) + '</td>' +
+        '<td data-l="RevPAR Status" data-sv="' + revStatus + '">' + ind(revStatus) + '</td></tr>';
+    }).join('') + '</tbody></table></div>' : '<p class="empty">No listings match this metric.</p>';
+    return { title: titles[key], sub: rows.length + ' listings. Select a listing for details.', parent: 'overview', html: explain([descriptions[key]]) + panel('Supporting listings', table) };
+  }
   function renderInsights() {
     var L = state.listings;
     if (!L.length) {
@@ -433,13 +464,14 @@
     var occN = avg(pluck(L, 'occN')), mkN = avg(pluck(L, 'mkN')), rev = avg(pluck(L, 'revN'));
     var revP = avg(pluck(L.filter(function (l) { return !l.blocked; }), 'rev'));
     var chg = revP ? (rev / revP - 1) * 100 : null, gap = occN != null && mkN != null ? occN - mkN : null;
-    var need = L.filter(function (l) { return statusClass(l.status) === 'r'; }).length;
+    var need = insightListings('flagged').length;
     var blocked = L.filter(function (l) { return l.blocked; }).length;
-    $('pulse').innerHTML = stat('Listings tracked', L.length, 'Pricelabs report', '', 'fa-house') +
-      stat('Average Next 30D Occupancy', pct(occN), mkN == null ? '' : 'Benchmark ' + pct(mkN) + ', ' + sign(gap) + pct(gap), cls(gap), 'fa-chart-pie') +
-      stat('Avg RevPAR Next 30D', money(rev), chg == null ? '' : sign(chg) + pct(chg) + ' vs past', cls(chg), 'fa-sack-dollar') +
-      stat('Flagged listings', need, 'Need attention', need ? 'down' : 'up', 'fa-circle-exclamation') +
-      stat('Fully blocked', blocked, 'No past RevPAR', '', 'fa-lock');
+    var declining = insightListings('declining').length;
+    $('pulse').innerHTML = stat('RevPAR Declining', declining, 'Next 30D below Past 30D', declining ? 'down' : 'up', 'fa-arrow-trend-down', '#/insight/declining') +
+      stat('Average Next 30D Occupancy', pct(occN), mkN == null ? '' : 'Benchmark ' + pct(mkN) + ', ' + sign(gap) + pct(gap), cls(gap), 'fa-chart-pie', '#/insight/occupancy') +
+      stat('Avg RevPAR Next 30D', money(rev), chg == null ? '' : sign(chg) + pct(chg) + ' vs past', cls(chg), 'fa-sack-dollar', '#/insight/revpar') +
+      stat('Flagged listings', need, 'Declining RevPAR', need ? 'down' : 'up', 'fa-arrow-trend-down', '#/insight/flagged') +
+      stat('Fully blocked', blocked, 'No past RevPAR', '', 'fa-lock', '#/insight/blocked');
 
     var gs = group(L, 'status').sort(function (a, b) { return b.items.length - a.items.length; });
     $('mix').innerHTML = gs.map(function (x) {
@@ -877,6 +909,7 @@
     else if (kind === 'kpi') r = dKpi(arg);
     else if (kind === 'region') r = dRegion(arg);
     else if (kind === 'listing') r = dListing(arg);
+    else if (kind === 'insight') r = dInsight(arg);
     var el = $('detail');
     if (!r) { el.innerHTML = '<a class="back" data-back="overview" href="#/overview"><i class="fa-solid fa-arrow-left"></i>Back</a><p class="empty">That item was not found in the latest data.</p>'; setTitle('Not found', ''); return; }
     el.innerHTML = '<a class="back" data-back="' + r.parent + '" href="#/' + r.parent + '"><i class="fa-solid fa-arrow-left"></i>Back</a>' + r.html;
